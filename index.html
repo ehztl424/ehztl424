@@ -1,562 +1,355 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>태준실험실 - Lab OS v3.0</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', 'Pretendard', sans-serif;
-            background-color: #ffffff;
-            color: #37352f;
-        }
-        .sidebar-item {
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .sidebar-item:hover {
-            background-color: #f1f5f9;
-        }
-        .sidebar-item.active {
-            background-color: #e2e8f0;
-            color: #4f46e5;
-            font-weight: 700;
-        }
-        
-        /* 노션 스타일 체크리스트 */
-        .notion-item {
-            display: flex;
-            align-items: flex-start;
-            padding: 3px 2px;
-            transition: background 0.1s;
-        }
-        .notion-item:hover {
-            background-color: rgba(55, 53, 47, 0.03);
-        }
-        .notion-checkbox {
-            appearance: none;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #37352f;
-            border-radius: 2px;
-            cursor: pointer;
-            position: relative;
-            margin-top: 4px;
-            flex-shrink: 0;
-        }
-        .notion-checkbox:checked {
-            background-color: #2383e2;
-            border-color: #2383e2;
-        }
-        .notion-checkbox:checked::after {
-            content: '✓';
-            position: absolute;
-            color: white;
-            font-size: 12px;
-            top: -2px;
-            left: 1px;
-        }
-        .notion-text {
-            font-size: 15px;
-            line-height: 1.5;
-            padding: 2px 8px;
-            flex: 1;
-            min-height: 24px;
-            word-break: break-all;
-            outline: none;
-        }
-        .notion-text.completed {
-            text-decoration: line-through;
-            color: rgba(55, 53, 47, 0.4);
-        }
-        .toggle-icon {
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            margin-top: 3px;
-            flex-shrink: 0;
-        }
-        .indent-0 { padding-left: 0px; }
-        .indent-1 { padding-left: 28px; }
-        .indent-2 { padding-left: 56px; }
-        
-        /* 드래그 앤 드롭 영역 */
-        #drop-zone.active {
-            border-color: #4f46e5;
-            background-color: #f5f3ff;
-        }
+import React, { useState } from 'react';
+import { 
+  LayoutDashboard, 
+  Calendar, 
+  Search, 
+  ChevronRight, 
+  X,
+  ArrowUpDown
+} from 'lucide-react';
 
-        /* 미리보기 모달 */
-        .modal-overlay {
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(4px);
-        }
+const App = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedMenu, setSelectedMenu] = useState('현지통역 일정표 (내부)');
 
-        .glass-card {
-            background: #fbfbfa;
-            border: 1px solid #edece9;
-        }
-    </style>
-</head>
-<body class="overflow-hidden">
+  // Mock Data
+  const tableData = [
+    { id: 1, name: '인증원', country: '중국 8조', client: '한국식품안전관리인증원', startDate: '2026. 4. 7.', endDate: '2026. 4. 15.', settleDate: '2026. 4. 27.', cost1: '4,370,000', cost2: '3,580,000', interpreter: '권영경', tms: 'O', chat: 'X', done: 'X', pay: 'X' },
+    { id: 2, name: '인증원', country: '중국 7조', client: '한국식품안전관리인증원', startDate: '2026. 4. 7.', endDate: '2026. 4. 15.', settleDate: '2026. 4. 27.', cost1: '4,370,000', cost2: '3,580,000', interpreter: '김태한', tms: 'O', chat: 'X', done: 'X', pay: 'X' },
+    { id: 3, name: '인증원', country: '중국 6조', client: '한국식품안전관리인증원', startDate: '2026. 4. 7.', endDate: '2026. 4. 15.', settleDate: '2026. 4. 27.', cost1: '4,370,000', cost2: '3,580,000', interpreter: '권영경', tms: 'O', chat: 'O', done: 'X', pay: 'X' },
+    { id: 4, name: '인증원', country: '중국 5조', client: '한국식품안전관리인증원', startDate: '2026. 4. 7.', endDate: '2026. 4. 15.', settleDate: '2026. 4. 27.', cost1: '4,370,000', cost2: '3,580,000', interpreter: '김태한', tms: 'O', chat: 'O', done: 'X', pay: 'X' },
+    { id: 5, name: '인증원', country: '중국 4조', client: '한국식품안전관리인증원', startDate: '2026. 4. 7.', endDate: '2026. 4. 15.', settleDate: '2026. 4. 27.', cost1: '4,370,000', cost2: '3,580,000', interpreter: '권영경', tms: 'O', chat: 'O', done: 'O', pay: 'X' },
+    { id: 6, name: '인증원', country: '중국 3조', client: '한국식품안전관리인증원', startDate: '2026. 4. 7.', endDate: '2026. 4. 15.', settleDate: '2026. 4. 27.', cost1: '4,370,000', cost2: '3,500,000', interpreter: '김태한', tms: 'O', chat: 'O', done: 'O', pay: 'X' },
+  ];
 
-    <div class="flex h-screen overflow-hidden">
-        <!-- 사이드바 -->
-        <aside class="w-64 bg-[#fbfbfa] border-r border-[#edece9] flex flex-col shrink-0">
-            <div class="p-6">
-                <h1 class="text-lg font-bold text-slate-800 flex items-center gap-2 cursor-pointer" onclick="showTab('dashboard')">
-                    <span class="text-2xl">🧪</span>
-                    태준실험실
-                </h1>
-            </div>
-            <nav class="flex-1 px-4 space-y-1">
-                <div onclick="showTab('dashboard')" id="nav-dashboard" class="sidebar-item active flex items-center gap-3 p-2 rounded-md text-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                    종합 대시보드
-                </div>
-                <div onclick="showTab('tasks')" id="nav-tasks" class="sidebar-item flex items-center gap-3 p-2 rounded-md text-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                    할 일 관리
-                </div>
-                <div onclick="showTab('resources')" id="nav-resources" class="sidebar-item flex items-center gap-3 p-2 rounded-md text-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                    자료 저장소
-                </div>
-            </nav>
-            <div class="p-4 border-t border-[#edece9]">
-                <div class="flex items-center gap-3 p-2">
-                    <div class="w-7 h-7 rounded bg-indigo-600 flex items-center justify-center text-white font-bold text-[10px]">TJ</div>
-                    <div class="text-[11px] overflow-hidden">
-                        <p class="font-bold">태준 연구원</p>
-                        <p class="text-slate-400 truncate w-32">로컬 저장소 모드</p>
-                    </div>
-                </div>
-            </div>
-        </aside>
-
-        <!-- 메인 콘텐츠 -->
-        <main class="flex-1 overflow-y-auto bg-white">
-            <header class="bg-white/80 backdrop-blur-md border-b border-[#edece9] sticky top-0 z-30 px-8 py-4 flex justify-between items-center">
-                <div>
-                    <h2 id="current-tab-title" class="text-sm font-bold text-slate-500 uppercase tracking-widest">대시보드</h2>
-                    <p id="digital-clock" class="text-[11px] text-slate-400 mt-0.5"></p>
-                </div>
-                <div id="sync-status" class="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
-                    로컬 데이터 안전함
-                </div>
-            </header>
-
-            <div class="p-8 lg:p-16 max-w-5xl mx-auto">
-                <!-- [1] 대시보드 탭 -->
-                <section id="tab-dashboard" class="space-y-12 animate-in fade-in duration-500">
-                    <div class="space-y-2">
-                        <h1 class="text-4xl font-bold tracking-tight text-slate-900">실험실 브리핑</h1>
-                        <p class="text-slate-500">브라우저 로컬 저장소를 활용한 오프라인 대시보드입니다.</p>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="glass-card p-6 rounded-2xl">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">전체 과제</p>
-                            <h3 id="stat-total" class="text-3xl font-bold">0</h3>
-                        </div>
-                        <div class="glass-card p-6 rounded-2xl text-green-600">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-2 text-slate-400">성공률</p>
-                            <h3 id="stat-progress" class="text-3xl font-bold">0%</h3>
-                            <div class="mt-4 w-full bg-slate-200 rounded-full h-1 overflow-hidden">
-                                <div id="stat-progress-bar" class="bg-green-500 h-full transition-all duration-1000" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        <div class="glass-card p-6 rounded-2xl">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">저장된 파일</p>
-                            <h3 id="stat-files" class="text-3xl font-bold">0</h3>
-                        </div>
-                    </div>
-
-                    <div class="space-y-4">
-                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
-                            최근 업데이트 과제
-                        </h4>
-                        <div id="dashboard-task-list" class="space-y-1 border-t border-[#edece9] pt-4">
-                            <!-- 대시보드 프리뷰 -->
-                        </div>
-                    </div>
-                </section>
-
-                <!-- [2] 할 일 관리 탭 -->
-                <section id="tab-tasks" class="hidden space-y-8 animate-in slide-in-from-right-4 duration-500">
-                    <div class="space-y-2">
-                        <h1 class="text-4xl font-bold tracking-tight text-slate-900">오늘의 할 일</h1>
-                        <p class="text-slate-500">노션의 계층 구조를 구현한 체크리스트입니다.</p>
-                    </div>
-
-                    <div class="flex gap-2 pb-6 border-b border-slate-100">
-                        <input type="text" id="taskInput" placeholder="무엇을 할까요? (엔터 입력)" class="flex-1 px-0 py-2 border-none focus:ring-0 text-xl font-medium placeholder-slate-200">
-                        <button onclick="addTask()" class="bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">추가</button>
-                    </div>
-
-                    <div id="taskList" class="space-y-0.5">
-                        <!-- 체크리스트 항목 -->
-                    </div>
-                </section>
-
-                <!-- [3] 자료 저장소 탭 -->
-                <section id="tab-resources" class="hidden space-y-8 animate-in slide-in-from-right-4 duration-500">
-                    <div class="space-y-2">
-                        <h1 class="text-4xl font-bold tracking-tight text-slate-900">자료 저장소</h1>
-                        <p class="text-slate-500">PDF 파일을 드래그하여 업로드하고 미리보기를 이용하세요.</p>
-                    </div>
-
-                    <div id="drop-zone" class="border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center transition-all flex flex-col items-center justify-center gap-4 bg-slate-50/50">
-                        <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm text-slate-400">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                        </div>
-                        <div>
-                            <p class="font-bold text-slate-800">파일을 이쪽으로 끌어다 놓으세요</p>
-                            <p class="text-xs text-slate-400 mt-1">PDF 파일만 지원됩니다 (최대 4MB 권장)</p>
-                        </div>
-                        <input type="file" id="fileInput" class="hidden" accept="application/pdf">
-                        <button onclick="document.getElementById('fileInput').click()" class="mt-2 text-[11px] font-black text-indigo-600 uppercase tracking-widest hover:underline">파일 직접 선택하기</button>
-                    </div>
-
-                    <div class="space-y-4">
-                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest">저장된 연구 자료</h4>
-                        <div id="file-list" class="grid grid-cols-1 gap-3">
-                            <!-- 파일 렌더링 -->
-                        </div>
-                    </div>
-                </section>
-            </div>
-        </main>
-    </div>
-
-    <!-- 미리보기 모달 -->
-    <div id="previewModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 modal-overlay" onclick="closePreview()"></div>
-        <div class="bg-white w-full max-w-5xl h-[85vh] rounded-3xl overflow-hidden shadow-2xl relative z-10 flex flex-col">
-            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
-                <h3 id="previewTitle" class="font-bold text-slate-800 text-sm">미리보기</h3>
-                <div class="flex gap-2">
-                    <button id="downloadBtn" class="px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold rounded-xl hover:bg-indigo-700 uppercase">다운로드</button>
-                    <button onclick="closePreview()" class="px-4 py-2 bg-slate-100 text-slate-600 text-[11px] font-bold rounded-xl hover:bg-slate-200 uppercase">닫기</button>
-                </div>
-            </div>
-            <div class="flex-1 bg-slate-100 relative">
-                <iframe id="pdfFrame" class="w-full h-full border-none" src=""></iframe>
-            </div>
+  return (
+    <div className="flex min-h-screen bg-gray-50 font-sans text-gray-800">
+      {/* Sidebar */}
+      <aside className="w-64 bg-[#0a0a0a] text-white flex-shrink-0 flex flex-col">
+        <div className="p-6 text-2xl font-black tracking-tighter border-b border-gray-800">
+          WORDCAT
         </div>
+        
+        <div className="p-6 bg-[#e9f2ff] text-gray-800">
+          <div className="text-xs text-gray-500 mb-1">NAME</div>
+          <div className="font-bold text-sm mb-3">박태준</div>
+          <div className="text-xs text-gray-500 mb-1">ID</div>
+          <div className="text-xs mb-4">ptj@lion-korea.com</div>
+          <button className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-300 rounded text-xs font-medium hover:bg-gray-100 transition-colors">
+            Log out
+          </button>
+        </div>
+
+        <nav className="flex-1 mt-4">
+          <ul className="space-y-1 px-2">
+            <li>
+              <button 
+                onClick={() => setSelectedMenu('대시보드')}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${selectedMenu === '대시보드' ? 'text-[#00a3ff] bg-[#1a1a1a]' : 'text-gray-400 hover:text-white'}`}
+              >
+                <LayoutDashboard size={18} />
+                대시보드
+              </button>
+            </li>
+            <li>
+              <button 
+                onClick={() => setSelectedMenu('현지통역 일정표 (내부)')}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${selectedMenu === '현지통역 일정표 (내부)' ? 'text-[#00a3ff] bg-[#1a1a1a]' : 'text-gray-400 hover:text-white'}`}
+              >
+                <Calendar size={18} />
+                현지통역 일정표 (내부)
+              </button>
+            </li>
+            <li>
+              <button 
+                onClick={() => setSelectedMenu('현지통역 일정표')}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors ${selectedMenu === '현지통역 일정표' ? 'text-[#00a3ff] bg-[#1a1a1a]' : 'text-gray-400 hover:text-white'}`}
+              >
+                <Calendar size={18} />
+                현지통역 일정표
+              </button>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col overflow-x-hidden">
+        {/* Header Tabs */}
+        <header className="bg-white border-b flex items-center px-6 h-14 shrink-0">
+          <div className="flex gap-10">
+            <button className={`${selectedMenu !== '대시보드' ? 'text-[#00a3ff] font-bold' : 'text-gray-400 font-medium'} text-sm relative`}>
+              현지실사
+              {selectedMenu !== '대시보드' && <span className="absolute -bottom-[17px] left-0 right-0 h-[2px] bg-[#00a3ff]"></span>}
+            </button>
+            <button className={`${selectedMenu === '대시보드' ? 'text-[#00a3ff] font-bold' : 'text-gray-400 font-medium'} text-sm relative`}>
+              마케팅팀
+              {selectedMenu === '대시보드' && <span className="absolute -bottom-[17px] left-0 right-0 h-[2px] bg-[#00a3ff]"></span>}
+            </button>
+            <button className="text-gray-400 font-medium text-sm hover:text-gray-600">운영관리</button>
+          </div>
+          <div className="ml-auto text-xs text-gray-400">
+            로그인시간 : 2026. 4. 28. 오후 6:31:01
+          </div>
+        </header>
+
+        {selectedMenu === '대시보드' ? (
+          <div className="p-8">
+            <div className="flex items-center gap-2 text-xs text-gray-400 mb-6">
+              <span>HOME</span> <ChevronRight size={12} /> 
+              <span>마케팅팀</span> <ChevronRight size={12} /> 
+              <span className="text-gray-600 font-medium">대시보드</span>
+            </div>
+            <h1 className="text-2xl font-bold mb-8">대시보드</h1>
+            <div className="mb-10">
+              <div className="flex items-center gap-4 mb-6">
+                <h2 className="text-lg font-bold">프로젝트 현황</h2>
+                <select className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white min-w-[200px]">
+                  <option>선택해 주세요</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[
+                  { val: '21', label: '총 프로젝트 건수' },
+                  { val: '96,340,454', label: '견적비용 총합' },
+                  { val: '78,387,124', label: '실제비용 총합' },
+                  { val: '22.903%', label: '수익률' }
+                ].map((stat, i) => (
+                  <div key={i} className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="text-[#00a3ff] text-3xl font-black mb-2 tracking-tight">{stat.val}</div>
+                    <div className="text-gray-500 text-xs font-medium">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-8">
+            <div className="flex items-center gap-2 text-xs text-gray-400 mb-6">
+              <span>HOME</span> <ChevronRight size={12} /> 
+              <span>현지실사</span> <ChevronRight size={12} /> 
+              <span className="text-gray-600 font-medium">{selectedMenu}</span>
+            </div>
+            
+            <h1 className="text-2xl font-bold mb-8">{selectedMenu}</h1>
+
+            <div className="bg-white p-6 rounded-lg border border-gray-200 mb-8 max-w-2xl">
+              <div className="flex items-center gap-4">
+                <label className="text-sm font-bold w-24">프로젝트명</label>
+                <div className="relative flex-1">
+                  <input type="text" placeholder="프로젝트명 검색" className="w-full pl-3 pr-10 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                  <Search className="absolute right-3 top-2.5 text-gray-400" size={16} />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-end mb-4">
+              <div className="text-sm text-gray-600">총 <span className="text-blue-500 font-bold">21</span>건</div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setIsModalOpen(true)} 
+                  className="px-4 py-2 bg-[#00a3ff] text-white text-sm font-bold rounded hover:bg-[#008de0] transition-colors"
+                >
+                  새로운 일정 추가
+                </button>
+                <button className="px-4 py-2 bg-[#00a3ff] text-white text-sm font-bold rounded hover:bg-[#008de0] transition-colors">
+                  선택한 항목 삭제하기
+                </button>
+                <select className="border border-gray-300 rounded text-sm px-2 py-2 bg-white">
+                  <option>10건씩 보기</option>
+                  <option>20건씩 보기</option>
+                  <option>50건씩 보기</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[1000px]">
+                <thead className="bg-gray-50 border-b">
+                  <tr className="text-xs font-bold text-gray-600">
+                    <th className="p-4 w-10 text-center"><input type="checkbox" /></th>
+                    <th className="p-4"><div className="flex items-center gap-1">프로젝트명 <ArrowUpDown size={14} /></div></th>
+                    <th className="p-4">국가</th>
+                    <th className="p-4">고객사</th>
+                    <th className="p-4">출발일</th>
+                    <th className="p-4">종료일</th>
+                    <th className="p-4">정산일</th>
+                    <th className="p-4">총견적</th>
+                    <th className="p-4">소요비용</th>
+                    <th className="p-4">통역사</th>
+                    <th className="p-4 text-center">TMS등록</th>
+                    <th className="p-4 text-center">채팅방</th>
+                    <th className="p-4 text-center">완료</th>
+                    <th className="p-4 text-center">정산</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {tableData.map((row) => (
+                    <tr key={row.id} className="text-xs hover:bg-blue-50 transition-colors">
+                      <td className="p-4 text-center"><input type="checkbox" /></td>
+                      <td className="p-4 text-blue-600 underline cursor-pointer">{row.name}</td>
+                      <td className="p-4">{row.country}</td>
+                      <td className="p-4">{row.client}</td>
+                      <td className="p-4">{row.startDate}</td>
+                      <td className="p-4">{row.endDate}</td>
+                      <td className="p-4">{row.settleDate}</td>
+                      <td className="p-4 font-medium">{row.cost1}</td>
+                      <td className="p-4 text-gray-500">{row.cost2}</td>
+                      <td className="p-4">{row.interpreter}</td>
+                      <td className="p-4 text-center">{row.tms}</td>
+                      <td className="p-4 text-center">{row.chat}</td>
+                      <td className="p-4 text-center">{row.done}</td>
+                      <td className="p-4 text-center">{row.pay}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Modal - 통역행사 추가/수정 */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto flex flex-col animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="flex justify-between items-center px-6 py-4 border-b bg-white sticky top-0 z-10">
+              <h2 className="text-lg font-bold">통역행사 추가/수정</h2>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors p-1">
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-8 space-y-5 flex-1">
+              {/* Project Name */}
+              <div className="flex items-center gap-4">
+                <label className="text-[13px] font-bold w-24 shrink-0">프로젝트명<span className="text-red-500 ml-0.5">*</span></label>
+                <input type="text" className="flex-1 border border-gray-300 rounded px-3 py-2.5 text-sm focus:ring-1 focus:ring-blue-500 outline-none" />
+              </div>
+
+              {/* Client & Country */}
+              <div className="grid grid-cols-2 gap-8">
+                <div className="flex items-center gap-4">
+                  <label className="text-[13px] font-bold w-24 shrink-0">고객사<span className="text-red-500 ml-0.5">*</span></label>
+                  <select className="flex-1 border border-gray-300 rounded px-3 py-2.5 text-sm bg-white outline-none">
+                    <option>선택해 주세요</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-4">
+                  <label className="text-[13px] font-bold w-24 shrink-0">국가<span className="text-red-500 ml-0.5">*</span></label>
+                  <input type="text" className="flex-1 border border-gray-300 rounded px-3 py-2.5 text-sm outline-none" />
+                </div>
+              </div>
+
+              {/* Dates */}
+              <div className="grid grid-cols-2 gap-8">
+                <div className="flex items-center gap-4">
+                  <label className="text-[13px] font-bold w-24 shrink-0">출발일<span className="text-red-500 ml-0.5">*</span></label>
+                  <div className="relative flex-1">
+                    <input type="text" placeholder="연도 - 월 - 일" className="w-full border border-gray-300 rounded px-3 py-2.5 text-sm bg-white outline-none" />
+                    <Calendar className="absolute right-3 top-2.5 text-gray-400 pointer-events-none" size={16} />
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <label className="text-[13px] font-bold w-24 shrink-0">종료일<span className="text-red-500 ml-0.5">*</span></label>
+                  <div className="relative flex-1">
+                    <input type="text" placeholder="연도 - 월 - 일" className="w-full border border-gray-300 rounded px-3 py-2.5 text-sm bg-white outline-none" />
+                    <Calendar className="absolute right-3 top-2.5 text-gray-400 pointer-events-none" size={16} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Fees Group 1 */}
+              <div className="grid grid-cols-2 gap-8">
+                <div className="flex items-center gap-4">
+                  <label className="text-[13px] font-bold w-24 shrink-0">통역료<span className="text-red-500 ml-0.5">*</span></label>
+                  <input type="text" defaultValue="0" className="flex-1 border border-gray-300 rounded px-3 py-2.5 text-sm text-right outline-none" />
+                </div>
+                <div className="flex items-center gap-4">
+                  <label className="text-[13px] font-bold w-24 shrink-0">항공료<span className="text-red-500 ml-0.5">*</span></label>
+                  <input type="text" defaultValue="0" className="flex-1 border border-gray-300 rounded px-3 py-2.5 text-sm text-right outline-none" />
+                </div>
+              </div>
+
+              {/* Fees Group 2 */}
+              <div className="grid grid-cols-2 gap-8">
+                <div className="flex items-center gap-4">
+                  <label className="text-[13px] font-bold w-24 shrink-0">선박료<span className="text-red-500 ml-0.5">*</span></label>
+                  <input type="text" defaultValue="0" className="flex-1 border border-gray-300 rounded px-3 py-2.5 text-sm text-right outline-none" />
+                </div>
+                <div className="flex items-center gap-4">
+                  <label className="text-[13px] font-bold w-24 shrink-0">기타 교통비<span className="text-red-500 ml-0.5">*</span></label>
+                  <input type="text" defaultValue="0" className="flex-1 border border-gray-300 rounded px-3 py-2.5 text-sm text-right outline-none" />
+                </div>
+              </div>
+
+              {/* Fees Group 3 */}
+              <div className="grid grid-cols-2 gap-8">
+                <div className="flex items-center gap-4">
+                  <label className="text-[13px] font-bold w-24 shrink-0">숙박비<span className="text-red-500 ml-0.5">*</span></label>
+                  <input type="text" defaultValue="0" className="flex-1 border border-gray-300 rounded px-3 py-2.5 text-sm text-right outline-none" />
+                </div>
+                <div className="flex items-center gap-4">
+                  <label className="text-[13px] font-bold w-24 shrink-0">총 견적비용</label>
+                  <input type="text" defaultValue="0" readOnly className="flex-1 border border-gray-200 rounded px-3 py-2.5 text-sm text-right bg-gray-50 text-gray-400 cursor-not-allowed outline-none" />
+                </div>
+              </div>
+
+              {/* Actual Cost */}
+              <div className="flex items-center gap-4">
+                <label className="text-[13px] font-bold w-24 shrink-0">실제 소요비용</label>
+                <input type="text" className="flex-1 border border-gray-300 rounded px-3 py-2.5 text-sm outline-none" />
+              </div>
+
+              {/* Interpreter */}
+              <div className="flex items-center gap-4">
+                <label className="text-[13px] font-bold w-24 shrink-0">통역사</label>
+                <input type="text" className="flex-1 border border-gray-300 rounded px-3 py-2.5 text-sm outline-none" />
+              </div>
+
+              {/* Checkbox Section */}
+              <div className="flex items-center py-4 border-t border-b border-gray-100 mt-6">
+                <div className="grid grid-cols-7 w-full gap-2">
+                  {[
+                    { label: '계약체결', id: 'chk1' },
+                    { label: '착수/인계', id: 'chk2' },
+                    { label: '나라장터 등록', id: 'chk3' },
+                    { label: 'TMS 등록', id: 'chk4' },
+                    { label: '채팅방 개설', id: 'chk5' },
+                    { label: '완료', id: 'chk6' },
+                    { label: '정산', id: 'chk7' },
+                  ].map((item) => (
+                    <div key={item.id} className="flex items-center justify-center gap-2">
+                      <span className="text-[13px] font-bold text-gray-700 whitespace-nowrap">{item.label}</span>
+                      <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Remarks */}
+              <div className="flex gap-4">
+                <label className="text-[13px] font-bold w-24 shrink-0 mt-3">특이사항</label>
+                <textarea className="flex-1 border border-gray-300 rounded-lg p-4 text-sm h-40 focus:ring-1 focus:ring-blue-500 outline-none resize-none" placeholder="내용을 입력해 주세요."></textarea>
+              </div>
+
+              {/* Footer Buttons */}
+              <div className="flex justify-center gap-3 pt-8 pb-4 bg-white sticky bottom-0">
+                <button className="px-12 py-3 bg-[#00a3ff] text-white text-sm font-bold rounded-md shadow-lg hover:bg-[#008de0] transition-all transform active:scale-95">
+                  신규 프로젝트 등록
+                </button>
+                <button onClick={() => setIsModalOpen(false)} className="px-12 py-3 bg-white border border-gray-300 text-gray-700 text-sm font-bold rounded-md hover:bg-gray-50 transition-all transform active:scale-95">
+                  닫기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+};
 
-    <!-- 토스트 알림 -->
-    <div id="toast" class="fixed bottom-8 right-8 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl transition-all opacity-0 pointer-events-none transform translate-y-4 z-50">
-        <p id="toast-msg" class="text-[11px] font-bold tracking-tight"></p>
-    </div>
-
-    <script>
-        /**
-         * v3.0 - 로컬 저장소 기반 태준실험실
-         * 외부 종속성 제거 및 안전한 데이터 관리
-         */
-
-        // --- 전역 함수: 탭 전환 ---
-        window.showTab = function(tabId) {
-            const tabs = ['dashboard', 'tasks', 'resources'];
-            tabs.forEach(id => {
-                const tabEl = document.getElementById(`tab-${id}`);
-                const navEl = document.getElementById(`nav-${id}`);
-                if (tabEl) tabEl.classList.toggle('hidden', id !== tabId);
-                if (navEl) navEl.classList.toggle('active', id === tabId);
-            });
-            const titles = { dashboard: '대시보드', tasks: '할 일 관리', resources: '자료 저장소' };
-            const titleEl = document.getElementById('current-tab-title');
-            if (titleEl) titleEl.innerText = titles[tabId] || tabId;
-        };
-
-        // 데이터 상태
-        let tasks = JSON.parse(localStorage.getItem('tj_tasks')) || [];
-        let files = JSON.parse(localStorage.getItem('tj_files')) || [];
-
-        function saveTasks() {
-            localStorage.setItem('tj_tasks', JSON.stringify(tasks));
-            renderAll();
-        }
-
-        function saveFiles() {
-            localStorage.setItem('tj_files', JSON.stringify(files));
-            renderFileList();
-            updateStats();
-        }
-
-        // 할 일 관리
-        window.addTask = function() {
-            const input = document.getElementById('taskInput');
-            if (!input || input.value.trim() === '') return;
-            
-            const newTask = {
-                id: Date.now().toString(),
-                text: input.value,
-                completed: false,
-                depth: 0,
-                type: 'todo',
-                createdAt: Date.now()
-            };
-
-            tasks.push(newTask);
-            input.value = '';
-            saveTasks();
-            showToast('🧪 과제 추가 완료');
-        };
-
-        window.toggleTask = function(id) {
-            tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
-            saveTasks();
-        };
-
-        window.updateIndent = function(id, direction) {
-            tasks = tasks.map(t => {
-                if (t.id === id) {
-                    const newDepth = Math.max(0, Math.min(2, t.depth + direction));
-                    return { ...t, depth: newDepth };
-                }
-                return t;
-            });
-            saveTasks();
-        };
-
-        window.toggleType = function(id) {
-            tasks = tasks.map(t => {
-                if (t.id === id) {
-                    return { ...t, type: t.type === 'todo' ? 'toggle' : 'todo' };
-                }
-                return t;
-            });
-            saveTasks();
-        };
-
-        window.removeTask = function(id) {
-            tasks = tasks.filter(t => t.id !== id);
-            saveTasks();
-            showToast('🚮 과제 삭제됨');
-        };
-
-        // 파일 관리
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('fileInput');
-
-        if (dropZone) {
-            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('active'); });
-            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('active'));
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('active');
-                handleFiles(e.dataTransfer.files);
-            });
-        }
-        if (fileInput) fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
-
-        function handleFiles(fileList) {
-            const file = fileList[0];
-            if (!file || file.type !== 'application/pdf') {
-                showToast('❌ PDF 파일만 지원됩니다.');
-                return;
-            }
-            if (file.size > 5 * 1024 * 1024) { // 5MB Limit for LocalStorage
-                showToast('❌ 5MB 이하의 파일만 권장됩니다.');
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const base64Data = e.target.result;
-                const newFile = {
-                    id: Date.now().toString(),
-                    name: file.name,
-                    size: (file.size / 1024).toFixed(1) + ' KB',
-                    data: base64Data,
-                    createdAt: Date.now()
-                };
-                files.push(newFile);
-                saveFiles();
-                showToast('📂 업로드 성공!');
-            };
-            reader.readAsDataURL(file);
-        }
-
-        window.previewFile = function(id) {
-            const file = files.find(f => f.id === id);
-            if (!file) return;
-            document.getElementById('previewTitle').innerText = file.name;
-            document.getElementById('pdfFrame').src = file.data;
-            document.getElementById('downloadBtn').onclick = () => downloadFile(file.data, file.name);
-            document.getElementById('previewModal').classList.remove('hidden');
-        };
-
-        window.closePreview = function() {
-            document.getElementById('previewModal').classList.add('hidden');
-            document.getElementById('pdfFrame').src = '';
-        };
-
-        function downloadFile(dataUrl, fileName) {
-            const link = document.createElement('a');
-            link.href = dataUrl;
-            link.download = fileName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        window.removeFile = function(id) {
-            files = files.filter(f => f.id !== id);
-            saveFiles();
-            showToast('파일이 삭제되었습니다.');
-        };
-
-        // 렌더링
-        function renderAll() {
-            renderChecklist();
-            renderDashboardPreview();
-            updateStats();
-        }
-
-        function renderChecklist() {
-            const container = document.getElementById('taskList');
-            if (!container) return;
-            container.innerHTML = '';
-            
-            tasks.forEach(task => {
-                const item = document.createElement('div');
-                item.className = `notion-item indent-${task.depth} group`;
-                
-                let iconHtml = '';
-                if (task.type === 'todo') {
-                    iconHtml = `<input type="checkbox" class="notion-checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask('${task.id}')">`;
-                } else {
-                    iconHtml = `<div class="toggle-icon" onclick="toggleTask('${task.id}')">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="${task.completed ? '#37352f' : 'none'}" stroke="#37352f" stroke-width="3" style="transform: ${task.completed ? 'rotate(90deg)' : 'rotate(0deg)'}; transition: transform 0.2s;">
-                            <path d="M5 3l14 9-14 9V3z"/>
-                        </svg>
-                    </div>`;
-                }
-
-                item.innerHTML = `
-                    <div class="flex items-start w-full">
-                        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pr-2 shrink-0">
-                            <button onclick="updateIndent('${task.id}', -1)" class="text-[10px] text-slate-300 hover:text-slate-600">◀</button>
-                            <button onclick="updateIndent('${task.id}', 1)" class="text-[10px] text-slate-300 hover:text-slate-600">▶</button>
-                            <button onclick="toggleType('${task.id}')" class="text-[10px] text-slate-300 hover:text-slate-600">⇄</button>
-                        </div>
-                        ${iconHtml}
-                        <div class="notion-text ${task.completed ? 'completed' : ''}">${task.text}</div>
-                        <button onclick="removeTask('${task.id}')" class="opacity-0 group-hover:opacity-100 text-[10px] text-slate-300 hover:text-red-400 p-2 uppercase font-black tracking-tighter">삭제</button>
-                    </div>
-                `;
-                container.appendChild(item);
-            });
-        }
-
-        function renderFileList() {
-            const container = document.getElementById('file-list');
-            if (!container) return;
-            container.innerHTML = '';
-            
-            if (files.length === 0) {
-                container.innerHTML = '<div class="p-8 text-center text-slate-300 text-xs italic">저장된 파일이 없습니다.</div>';
-                return;
-            }
-
-            files.forEach(file => {
-                const card = document.createElement('div');
-                card.className = "flex items-center justify-between p-4 bg-slate-50/50 border border-[#edece9] rounded-2xl hover:bg-white hover:shadow-sm transition-all";
-                card.innerHTML = `
-                    <div class="flex items-center gap-3 overflow-hidden">
-                        <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 shrink-0">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        </div>
-                        <div class="overflow-hidden">
-                            <p class="font-bold text-sm text-slate-700 truncate">${file.name}</p>
-                            <p class="text-[10px] text-slate-400 uppercase font-black tracking-wider">${file.size} • ${new Date(file.createdAt).toLocaleDateString()}</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="previewFile('${file.id}')" class="px-3 py-1.5 bg-white border border-slate-200 text-[10px] font-black uppercase rounded-lg hover:bg-slate-50">미리보기</button>
-                        <button onclick="removeFile('${file.id}')" class="p-1.5 text-slate-300 hover:text-red-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                        </button>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function renderDashboardPreview() {
-            const container = document.getElementById('dashboard-task-list');
-            if (!container) return;
-            container.innerHTML = '';
-            const recent = [...tasks].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
-
-            if (recent.length === 0) {
-                container.innerHTML = `<div class="py-12 text-center text-slate-300 text-xs italic tracking-tighter">진행 중인 과제가 없습니다.</div>`;
-                return;
-            }
-
-            recent.forEach(task => {
-                const div = document.createElement('div');
-                div.className = "flex items-center justify-between py-3 group cursor-pointer";
-                div.onclick = () => showTab('tasks');
-                div.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-1.5 h-1.5 rounded-full ${task.completed ? 'bg-green-500' : 'bg-amber-400'}"></div>
-                        <span class="text-sm font-medium ${task.completed ? 'text-slate-300 line-through' : 'text-slate-600'}">${task.text}</span>
-                    </div>
-                    <span class="text-[9px] font-black ${task.completed ? 'text-green-500' : 'text-slate-300'} uppercase group-hover:text-indigo-500 transition-colors">${task.completed ? '성공' : '연구중'}</span>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        function updateStats() {
-            const total = tasks.length;
-            const completed = tasks.filter(t => t.completed).length;
-            const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
-            
-            document.getElementById('stat-total').innerText = total;
-            document.getElementById('stat-progress').innerText = progress + '%';
-            document.getElementById('stat-progress-bar').style.width = progress + '%';
-            document.getElementById('stat-files').innerText = files.length;
-        }
-
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            const toastMsg = document.getElementById('toast-msg');
-            if (toast && toastMsg) {
-                toastMsg.innerText = msg;
-                toast.style.opacity = '1';
-                toast.style.transform = 'translateY(0)';
-                setTimeout(() => {
-                    toast.style.opacity = '0';
-                    toast.style.transform = 'translateY(16px)';
-                }, 3000);
-            }
-        }
-
-        function updateClock() {
-            const now = new Date();
-            const clockEl = document.getElementById('digital-clock');
-            if (clockEl) clockEl.innerText = now.toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' });
-        }
-        setInterval(updateClock, 1000);
-        updateClock();
-
-        document.getElementById('taskInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') addTask(); });
-
-        // 초기 실행
-        renderAll();
-        renderFileList();
-    </script>
-</body>
-</html>
+export default App;

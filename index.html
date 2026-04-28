@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>태준실험실 - Lab OS v2.8</title>
+    <title>태준실험실 - Lab OS v3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -65,6 +65,7 @@
             flex: 1;
             min-height: 24px;
             word-break: break-all;
+            outline: none;
         }
         .notion-text.completed {
             text-decoration: line-through;
@@ -132,7 +133,7 @@
                     <div class="w-7 h-7 rounded bg-indigo-600 flex items-center justify-center text-white font-bold text-[10px]">TJ</div>
                     <div class="text-[11px] overflow-hidden">
                         <p class="font-bold">태준 연구원</p>
-                        <p class="text-slate-400 truncate w-32" id="user-id">연결 중...</p>
+                        <p class="text-slate-400 truncate w-32">로컬 저장소 모드</p>
                     </div>
                 </div>
             </div>
@@ -145,8 +146,8 @@
                     <h2 id="current-tab-title" class="text-sm font-bold text-slate-500 uppercase tracking-widest">대시보드</h2>
                     <p id="digital-clock" class="text-[11px] text-slate-400 mt-0.5"></p>
                 </div>
-                <div id="sync-status" class="text-[10px] font-bold text-green-500 bg-green-50 px-3 py-1 rounded-full border border-green-100">
-                    실시간 연결됨
+                <div id="sync-status" class="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
+                    로컬 데이터 안전함
                 </div>
             </header>
 
@@ -155,7 +156,7 @@
                 <section id="tab-dashboard" class="space-y-12 animate-in fade-in duration-500">
                     <div class="space-y-2">
                         <h1 class="text-4xl font-bold tracking-tight text-slate-900">실험실 브리핑</h1>
-                        <p class="text-slate-500">현재까지의 누적 데이터와 성과 요약입니다.</p>
+                        <p class="text-slate-500">브라우저 로컬 저장소를 활용한 오프라인 대시보드입니다.</p>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -171,7 +172,7 @@
                             </div>
                         </div>
                         <div class="glass-card p-6 rounded-2xl">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">클라우드 파일</p>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">저장된 파일</p>
                             <h3 id="stat-files" class="text-3xl font-bold">0</h3>
                         </div>
                     </div>
@@ -211,20 +212,18 @@
                         <p class="text-slate-500">PDF 파일을 드래그하여 업로드하고 미리보기를 이용하세요.</p>
                     </div>
 
-                    <!-- 드롭 영역 -->
                     <div id="drop-zone" class="border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center transition-all flex flex-col items-center justify-center gap-4 bg-slate-50/50">
                         <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm text-slate-400">
                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         </div>
                         <div>
                             <p class="font-bold text-slate-800">파일을 이쪽으로 끌어다 놓으세요</p>
-                            <p class="text-xs text-slate-400 mt-1">PDF 파일만 지원됩니다 (최대 1MB)</p>
+                            <p class="text-xs text-slate-400 mt-1">PDF 파일만 지원됩니다 (최대 4MB 권장)</p>
                         </div>
                         <input type="file" id="fileInput" class="hidden" accept="application/pdf">
                         <button onclick="document.getElementById('fileInput').click()" class="mt-2 text-[11px] font-black text-indigo-600 uppercase tracking-widest hover:underline">파일 직접 선택하기</button>
                     </div>
 
-                    <!-- 파일 목록 -->
                     <div class="space-y-4">
                         <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest">저장된 연구 자료</h4>
                         <div id="file-list" class="grid grid-cols-1 gap-3">
@@ -236,15 +235,15 @@
         </main>
     </div>
 
-    <!-- PDF 미리보기 모달 -->
+    <!-- 미리보기 모달 -->
     <div id="previewModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 modal-overlay" onclick="closePreview()"></div>
         <div class="bg-white w-full max-w-5xl h-[85vh] rounded-3xl overflow-hidden shadow-2xl relative z-10 flex flex-col">
             <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
-                <h3 id="previewTitle" class="font-bold text-slate-800">PDF 미리보기</h3>
+                <h3 id="previewTitle" class="font-bold text-slate-800 text-sm">미리보기</h3>
                 <div class="flex gap-2">
-                    <button id="downloadBtn" class="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700">다운로드</button>
-                    <button onclick="closePreview()" class="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-200">닫기</button>
+                    <button id="downloadBtn" class="px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold rounded-xl hover:bg-indigo-700 uppercase">다운로드</button>
+                    <button onclick="closePreview()" class="px-4 py-2 bg-slate-100 text-slate-600 text-[11px] font-bold rounded-xl hover:bg-slate-200 uppercase">닫기</button>
                 </div>
             </div>
             <div class="flex-1 bg-slate-100 relative">
@@ -258,12 +257,13 @@
         <p id="toast-msg" class="text-[11px] font-bold tracking-tight"></p>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <script>
+        /**
+         * v3.0 - 로컬 저장소 기반 태준실험실
+         * 외부 종속성 제거 및 안전한 데이터 관리
+         */
 
-        // --- 전역 함수 할당 (최상단 배치로 클릭 이슈 해결) ---
+        // --- 전역 함수: 탭 전환 ---
         window.showTab = function(tabId) {
             const tabs = ['dashboard', 'tasks', 'resources'];
             tabs.forEach(id => {
@@ -277,114 +277,74 @@
             if (titleEl) titleEl.innerText = titles[tabId] || tabId;
         };
 
-        // Firebase 설정 (예외 처리 추가)
-        let firebaseConfig;
-        try {
-            firebaseConfig = JSON.parse(__firebase_config);
-        } catch (e) {
-            console.error("Firebase 설정이 올바르지 않습니다.");
-            firebaseConfig = {}; 
-        }
-        
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'taejun-lab-v28';
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        // 데이터 상태
+        let tasks = JSON.parse(localStorage.getItem('tj_tasks')) || [];
+        let files = JSON.parse(localStorage.getItem('tj_files')) || [];
 
-        let user = null;
-        let tasks = [];
-        let files = [];
-
-        // 인증 로직
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (err) {
-                console.error("인증 실패:", err);
-            }
-        };
-
-        onAuthStateChanged(auth, (u) => {
-            user = u;
-            if (user) {
-                const userDisplayId = document.getElementById('user-id');
-                if (userDisplayId) userDisplayId.innerText = user.uid;
-                startSync();
-            }
-        });
-        initAuth();
-
-        // 실시간 동기화
-        function startSync() {
-            if (!user) return;
-            
-            // 할 일 동기화
-            const tasksRef = collection(db, 'artifacts', appId, 'public', 'data', 'tasks');
-            onSnapshot(tasksRef, (snapshot) => {
-                tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderAll();
-            }, (err) => console.error("할 일 동기화 실패:", err));
-
-            // 파일 메타데이터 동기화
-            const filesRef = collection(db, 'artifacts', appId, 'public', 'data', 'files');
-            onSnapshot(filesRef, (snapshot) => {
-                files = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderFileList();
-                updateStats();
-            }, (err) => console.error("파일 동기화 실패:", err));
+        function saveTasks() {
+            localStorage.setItem('tj_tasks', JSON.stringify(tasks));
+            renderAll();
         }
 
-        // 할 일 관리 로직
-        window.addTask = async function() {
+        function saveFiles() {
+            localStorage.setItem('tj_files', JSON.stringify(files));
+            renderFileList();
+            updateStats();
+        }
+
+        // 할 일 관리
+        window.addTask = function() {
             const input = document.getElementById('taskInput');
-            if (!user || !input || input.value.trim() === '') return;
-            try {
-                const tasksRef = collection(db, 'artifacts', appId, 'public', 'data', 'tasks');
-                await addDoc(tasksRef, {
-                    text: input.value,
-                    completed: false,
-                    depth: 0,
-                    type: 'todo',
-                    createdAt: Date.now(),
-                    userId: user.uid
-                });
-                input.value = '';
-                showToast('🧪 과제 추가 완료');
-            } catch (e) { showToast('추가 실패'); }
+            if (!input || input.value.trim() === '') return;
+            
+            const newTask = {
+                id: Date.now().toString(),
+                text: input.value,
+                completed: false,
+                depth: 0,
+                type: 'todo',
+                createdAt: Date.now()
+            };
+
+            tasks.push(newTask);
+            input.value = '';
+            saveTasks();
+            showToast('🧪 과제 추가 완료');
         };
 
-        window.toggleTask = async function(id, currentStatus) {
-            if (!user) return;
-            const taskDoc = doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id);
-            await updateDoc(taskDoc, { completed: !currentStatus });
+        window.toggleTask = function(id) {
+            tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+            saveTasks();
         };
 
-        window.updateIndent = async function(id, currentDepth, direction) {
-            if (!user) return;
-            const newDepth = Math.max(0, Math.min(2, currentDepth + direction));
-            const taskDoc = doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id);
-            await updateDoc(taskDoc, { depth: newDepth });
+        window.updateIndent = function(id, direction) {
+            tasks = tasks.map(t => {
+                if (t.id === id) {
+                    const newDepth = Math.max(0, Math.min(2, t.depth + direction));
+                    return { ...t, depth: newDepth };
+                }
+                return t;
+            });
+            saveTasks();
         };
 
-        window.toggleType = async function(id, currentType) {
-            if (!user) return;
-            const newType = currentType === 'todo' ? 'toggle' : 'todo';
-            const taskDoc = doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id);
-            await updateDoc(taskDoc, { type: newType });
+        window.toggleType = function(id) {
+            tasks = tasks.map(t => {
+                if (t.id === id) {
+                    return { ...t, type: t.type === 'todo' ? 'toggle' : 'todo' };
+                }
+                return t;
+            });
+            saveTasks();
         };
 
-        window.removeTask = async function(id) {
-            if (!user) return;
-            const taskDoc = doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id);
-            await deleteDoc(taskDoc);
+        window.removeTask = function(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            saveTasks();
             showToast('🚮 과제 삭제됨');
         };
 
-        // 파일 업로드 로직
+        // 파일 관리
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('fileInput');
 
@@ -399,33 +359,30 @@
         }
         if (fileInput) fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
 
-        async function handleFiles(fileList) {
-            if (!user) return;
+        function handleFiles(fileList) {
             const file = fileList[0];
             if (!file || file.type !== 'application/pdf') {
                 showToast('❌ PDF 파일만 지원됩니다.');
                 return;
             }
-            if (file.size > 1024 * 1024) {
-                showToast('❌ 1MB 이하만 업로드 가능합니다.');
+            if (file.size > 5 * 1024 * 1024) { // 5MB Limit for LocalStorage
+                showToast('❌ 5MB 이하의 파일만 권장됩니다.');
                 return;
             }
 
             const reader = new FileReader();
-            reader.onload = async (e) => {
+            reader.onload = function(e) {
                 const base64Data = e.target.result;
-                try {
-                    const filesRef = collection(db, 'artifacts', appId, 'public', 'data', 'files');
-                    await addDoc(filesRef, {
-                        name: file.name,
-                        size: (file.size / 1024).toFixed(1) + ' KB',
-                        type: 'application/pdf',
-                        data: base64Data,
-                        createdAt: Date.now(),
-                        userId: user.uid
-                    });
-                    showToast('📂 업로드 성공!');
-                } catch (err) { showToast('❌ 업로드 실패'); }
+                const newFile = {
+                    id: Date.now().toString(),
+                    name: file.name,
+                    size: (file.size / 1024).toFixed(1) + ' KB',
+                    data: base64Data,
+                    createdAt: Date.now()
+                };
+                files.push(newFile);
+                saveFiles();
+                showToast('📂 업로드 성공!');
             };
             reader.readAsDataURL(file);
         }
@@ -440,10 +397,8 @@
         };
 
         window.closePreview = function() {
-            const modal = document.getElementById('previewModal');
-            if (modal) modal.classList.add('hidden');
-            const frame = document.getElementById('pdfFrame');
-            if (frame) frame.src = '';
+            document.getElementById('previewModal').classList.add('hidden');
+            document.getElementById('pdfFrame').src = '';
         };
 
         function downloadFile(dataUrl, fileName) {
@@ -455,18 +410,16 @@
             document.body.removeChild(link);
         }
 
-        window.removeFile = async function(id) {
-            if (!user) return;
-            const fileDoc = doc(db, 'artifacts', appId, 'public', 'data', 'files', id);
-            await deleteDoc(fileDoc);
+        window.removeFile = function(id) {
+            files = files.filter(f => f.id !== id);
+            saveFiles();
             showToast('파일이 삭제되었습니다.');
         };
 
-        // 렌더링 함수
+        // 렌더링
         function renderAll() {
             renderChecklist();
             renderDashboardPreview();
-            renderFileList();
             updateStats();
         }
 
@@ -474,17 +427,16 @@
             const container = document.getElementById('taskList');
             if (!container) return;
             container.innerHTML = '';
-            const sorted = [...tasks].sort((a, b) => a.createdAt - b.createdAt);
-
-            sorted.forEach(task => {
+            
+            tasks.forEach(task => {
                 const item = document.createElement('div');
                 item.className = `notion-item indent-${task.depth} group`;
                 
                 let iconHtml = '';
                 if (task.type === 'todo') {
-                    iconHtml = `<input type="checkbox" class="notion-checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask('${task.id}', ${task.completed})">`;
+                    iconHtml = `<input type="checkbox" class="notion-checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask('${task.id}')">`;
                 } else {
-                    iconHtml = `<div class="toggle-icon" onclick="toggleTask('${task.id}', ${task.completed})">
+                    iconHtml = `<div class="toggle-icon" onclick="toggleTask('${task.id}')">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="${task.completed ? '#37352f' : 'none'}" stroke="#37352f" stroke-width="3" style="transform: ${task.completed ? 'rotate(90deg)' : 'rotate(0deg)'}; transition: transform 0.2s;">
                             <path d="M5 3l14 9-14 9V3z"/>
                         </svg>
@@ -494,9 +446,9 @@
                 item.innerHTML = `
                     <div class="flex items-start w-full">
                         <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pr-2 shrink-0">
-                            <button onclick="updateIndent('${task.id}', ${task.depth}, -1)" class="text-[10px] text-slate-300 hover:text-slate-600">◀</button>
-                            <button onclick="updateIndent('${task.id}', ${task.depth}, 1)" class="text-[10px] text-slate-300 hover:text-slate-600">▶</button>
-                            <button onclick="toggleType('${task.id}', '${task.type}')" class="text-[10px] text-slate-300 hover:text-slate-600">⇄</button>
+                            <button onclick="updateIndent('${task.id}', -1)" class="text-[10px] text-slate-300 hover:text-slate-600">◀</button>
+                            <button onclick="updateIndent('${task.id}', 1)" class="text-[10px] text-slate-300 hover:text-slate-600">▶</button>
+                            <button onclick="toggleType('${task.id}')" class="text-[10px] text-slate-300 hover:text-slate-600">⇄</button>
                         </div>
                         ${iconHtml}
                         <div class="notion-text ${task.completed ? 'completed' : ''}">${task.text}</div>
@@ -517,7 +469,7 @@
                 return;
             }
 
-            files.sort((a, b) => b.createdAt - a.createdAt).forEach(file => {
+            files.forEach(file => {
                 const card = document.createElement('div');
                 card.className = "flex items-center justify-between p-4 bg-slate-50/50 border border-[#edece9] rounded-2xl hover:bg-white hover:shadow-sm transition-all";
                 card.innerHTML = `
@@ -571,15 +523,11 @@
             const total = tasks.length;
             const completed = tasks.filter(t => t.completed).length;
             const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
-            const statTotal = document.getElementById('stat-total');
-            const statProgress = document.getElementById('stat-progress');
-            const statBar = document.getElementById('stat-progress-bar');
-            const statFiles = document.getElementById('stat-files');
-
-            if (statTotal) statTotal.innerText = total;
-            if (statProgress) statProgress.innerText = progress + '%';
-            if (statBar) statBar.style.width = progress + '%';
-            if (statFiles) statFiles.innerText = files.length;
+            
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-progress').innerText = progress + '%';
+            document.getElementById('stat-progress-bar').style.width = progress + '%';
+            document.getElementById('stat-files').innerText = files.length;
         }
 
         function showToast(msg) {
@@ -604,8 +552,11 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        const taskInput = document.getElementById('taskInput');
-        if (taskInput) taskInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addTask(); });
+        document.getElementById('taskInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') addTask(); });
+
+        // 초기 실행
+        renderAll();
+        renderFileList();
     </script>
 </body>
 </html>

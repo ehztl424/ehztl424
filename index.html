@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>태준실험실 - Lab OS v2.7</title>
+    <title>태준실험실 - Lab OS v2.8</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -25,7 +25,7 @@
             font-weight: 700;
         }
         
-        /* Notion Style Checklist */
+        /* 노션 스타일 체크리스트 */
         .notion-item {
             display: flex;
             align-items: flex-start;
@@ -84,13 +84,13 @@
         .indent-1 { padding-left: 28px; }
         .indent-2 { padding-left: 56px; }
         
-        /* Drop Zone */
+        /* 드래그 앤 드롭 영역 */
         #drop-zone.active {
             border-color: #4f46e5;
             background-color: #f5f3ff;
         }
 
-        /* Modal Preview */
+        /* 미리보기 모달 */
         .modal-overlay {
             background: rgba(0, 0, 0, 0.7);
             backdrop-filter: blur(4px);
@@ -105,7 +105,7 @@
 <body class="overflow-hidden">
 
     <div class="flex h-screen overflow-hidden">
-        <!-- Sidebar -->
+        <!-- 사이드바 -->
         <aside class="w-64 bg-[#fbfbfa] border-r border-[#edece9] flex flex-col shrink-0">
             <div class="p-6">
                 <h1 class="text-lg font-bold text-slate-800 flex items-center gap-2 cursor-pointer" onclick="showTab('dashboard')">
@@ -138,20 +138,20 @@
             </div>
         </aside>
 
-        <!-- Main Content -->
+        <!-- 메인 콘텐츠 -->
         <main class="flex-1 overflow-y-auto bg-white">
             <header class="bg-white/80 backdrop-blur-md border-b border-[#edece9] sticky top-0 z-30 px-8 py-4 flex justify-between items-center">
                 <div>
-                    <h2 id="current-tab-title" class="text-sm font-bold text-slate-500 uppercase tracking-widest">Dashboard</h2>
+                    <h2 id="current-tab-title" class="text-sm font-bold text-slate-500 uppercase tracking-widest">대시보드</h2>
                     <p id="digital-clock" class="text-[11px] text-slate-400 mt-0.5"></p>
                 </div>
                 <div id="sync-status" class="text-[10px] font-bold text-green-500 bg-green-50 px-3 py-1 rounded-full border border-green-100">
-                    LAB CONNECTED
+                    실시간 연결됨
                 </div>
             </header>
 
             <div class="p-8 lg:p-16 max-w-5xl mx-auto">
-                <!-- [1] Dashboard Tab -->
+                <!-- [1] 대시보드 탭 -->
                 <section id="tab-dashboard" class="space-y-12 animate-in fade-in duration-500">
                     <div class="space-y-2">
                         <h1 class="text-4xl font-bold tracking-tight text-slate-900">실험실 브리핑</h1>
@@ -160,18 +160,18 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="glass-card p-6 rounded-2xl">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Total Tasks</p>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">전체 과제</p>
                             <h3 id="stat-total" class="text-3xl font-bold">0</h3>
                         </div>
                         <div class="glass-card p-6 rounded-2xl text-green-600">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-2 text-slate-400">Success Rate</p>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-2 text-slate-400">성공률</p>
                             <h3 id="stat-progress" class="text-3xl font-bold">0%</h3>
                             <div class="mt-4 w-full bg-slate-200 rounded-full h-1 overflow-hidden">
                                 <div id="stat-progress-bar" class="bg-green-500 h-full transition-all duration-1000" style="width: 0%"></div>
                             </div>
                         </div>
                         <div class="glass-card p-6 rounded-2xl">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Cloud Files</p>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">클라우드 파일</p>
                             <h3 id="stat-files" class="text-3xl font-bold">0</h3>
                         </div>
                     </div>
@@ -182,36 +182,36 @@
                             최근 업데이트 과제
                         </h4>
                         <div id="dashboard-task-list" class="space-y-1 border-t border-[#edece9] pt-4">
-                            <!-- Dashboard preview -->
+                            <!-- 대시보드 프리뷰 -->
                         </div>
                     </div>
                 </section>
 
-                <!-- [2] Tasks Tab -->
+                <!-- [2] 할 일 관리 탭 -->
                 <section id="tab-tasks" class="hidden space-y-8 animate-in slide-in-from-right-4 duration-500">
                     <div class="space-y-2">
                         <h1 class="text-4xl font-bold tracking-tight text-slate-900">오늘의 할 일</h1>
-                        <p class="text-slate-500">노션의 계층 구조를 그대로 구현한 체크리스트입니다.</p>
+                        <p class="text-slate-500">노션의 계층 구조를 구현한 체크리스트입니다.</p>
                     </div>
 
                     <div class="flex gap-2 pb-6 border-b border-slate-100">
-                        <input type="text" id="taskInput" placeholder="무엇을 할까요? (Enter)" class="flex-1 px-0 py-2 border-none focus:ring-0 text-xl font-medium placeholder-slate-200">
+                        <input type="text" id="taskInput" placeholder="무엇을 할까요? (엔터 입력)" class="flex-1 px-0 py-2 border-none focus:ring-0 text-xl font-medium placeholder-slate-200">
                         <button onclick="addTask()" class="bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">추가</button>
                     </div>
 
                     <div id="taskList" class="space-y-0.5">
-                        <!-- Notion items -->
+                        <!-- 체크리스트 항목 -->
                     </div>
                 </section>
 
-                <!-- [3] Resources Tab (File Management) -->
+                <!-- [3] 자료 저장소 탭 -->
                 <section id="tab-resources" class="hidden space-y-8 animate-in slide-in-from-right-4 duration-500">
                     <div class="space-y-2">
                         <h1 class="text-4xl font-bold tracking-tight text-slate-900">자료 저장소</h1>
                         <p class="text-slate-500">PDF 파일을 드래그하여 업로드하고 미리보기를 이용하세요.</p>
                     </div>
 
-                    <!-- Drag & Drop Area -->
+                    <!-- 드롭 영역 -->
                     <div id="drop-zone" class="border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center transition-all flex flex-col items-center justify-center gap-4 bg-slate-50/50">
                         <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm text-slate-400">
                             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -224,11 +224,11 @@
                         <button onclick="document.getElementById('fileInput').click()" class="mt-2 text-[11px] font-black text-indigo-600 uppercase tracking-widest hover:underline">파일 직접 선택하기</button>
                     </div>
 
-                    <!-- File List -->
+                    <!-- 파일 목록 -->
                     <div class="space-y-4">
                         <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest">저장된 연구 자료</h4>
                         <div id="file-list" class="grid grid-cols-1 gap-3">
-                            <!-- Files will be rendered here -->
+                            <!-- 파일 렌더링 -->
                         </div>
                     </div>
                 </section>
@@ -236,7 +236,7 @@
         </main>
     </div>
 
-    <!-- PDF Preview Modal -->
+    <!-- PDF 미리보기 모달 -->
     <div id="previewModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 modal-overlay" onclick="closePreview()"></div>
         <div class="bg-white w-full max-w-5xl h-[85vh] rounded-3xl overflow-hidden shadow-2xl relative z-10 flex flex-col">
@@ -253,7 +253,7 @@
         </div>
     </div>
 
-    <!-- Toast Notification -->
+    <!-- 토스트 알림 -->
     <div id="toast" class="fixed bottom-8 right-8 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl transition-all opacity-0 pointer-events-none transform translate-y-4 z-50">
         <p id="toast-msg" class="text-[11px] font-bold tracking-tight"></p>
     </div>
@@ -263,8 +263,30 @@
         import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'taejun-lab-v27';
+        // --- 전역 함수 할당 (최상단 배치로 클릭 이슈 해결) ---
+        window.showTab = function(tabId) {
+            const tabs = ['dashboard', 'tasks', 'resources'];
+            tabs.forEach(id => {
+                const tabEl = document.getElementById(`tab-${id}`);
+                const navEl = document.getElementById(`nav-${id}`);
+                if (tabEl) tabEl.classList.toggle('hidden', id !== tabId);
+                if (navEl) navEl.classList.toggle('active', id === tabId);
+            });
+            const titles = { dashboard: '대시보드', tasks: '할 일 관리', resources: '자료 저장소' };
+            const titleEl = document.getElementById('current-tab-title');
+            if (titleEl) titleEl.innerText = titles[tabId] || tabId;
+        };
+
+        // Firebase 설정 (예외 처리 추가)
+        let firebaseConfig;
+        try {
+            firebaseConfig = JSON.parse(__firebase_config);
+        } catch (e) {
+            console.error("Firebase 설정이 올바르지 않습니다.");
+            firebaseConfig = {}; 
+        }
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'taejun-lab-v28';
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -273,48 +295,53 @@
         let tasks = [];
         let files = [];
 
-        // Auth
+        // 인증 로직
         const initAuth = async () => {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (err) {
+                console.error("인증 실패:", err);
             }
         };
 
         onAuthStateChanged(auth, (u) => {
             user = u;
             if (user) {
-                document.getElementById('user-id').innerText = user.uid;
+                const userDisplayId = document.getElementById('user-id');
+                if (userDisplayId) userDisplayId.innerText = user.uid;
                 startSync();
             }
         });
         initAuth();
 
-        // Real-time Sync
+        // 실시간 동기화
         function startSync() {
             if (!user) return;
             
-            // Sync Tasks
+            // 할 일 동기화
             const tasksRef = collection(db, 'artifacts', appId, 'public', 'data', 'tasks');
             onSnapshot(tasksRef, (snapshot) => {
                 tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderAll();
-            });
+            }, (err) => console.error("할 일 동기화 실패:", err));
 
-            // Sync Files Metadata
+            // 파일 메타데이터 동기화
             const filesRef = collection(db, 'artifacts', appId, 'public', 'data', 'files');
             onSnapshot(filesRef, (snapshot) => {
                 files = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderFileList();
                 updateStats();
-            });
+            }, (err) => console.error("파일 동기화 실패:", err));
         }
 
-        // Task Logic
+        // 할 일 관리 로직
         window.addTask = async function() {
             const input = document.getElementById('taskInput');
-            if (!user || input.value.trim() === '') return;
+            if (!user || !input || input.value.trim() === '') return;
             try {
                 const tasksRef = collection(db, 'artifacts', appId, 'public', 'data', 'tasks');
                 await addDoc(tasksRef, {
@@ -327,7 +354,7 @@
                 });
                 input.value = '';
                 showToast('🧪 과제 추가 완료');
-            } catch (e) { console.error(e); }
+            } catch (e) { showToast('추가 실패'); }
         };
 
         window.toggleTask = async function(id, currentStatus) {
@@ -357,38 +384,30 @@
             showToast('🚮 과제 삭제됨');
         };
 
-        // File Logic (Drag & Drop)
+        // 파일 업로드 로직
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('fileInput');
 
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('active');
-        });
-
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('active'));
-
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('active');
-            const files = e.dataTransfer.files;
-            handleFiles(files);
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            handleFiles(e.target.files);
-        });
+        if (dropZone) {
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('active'); });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('active'));
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('active');
+                handleFiles(e.dataTransfer.files);
+            });
+        }
+        if (fileInput) fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
 
         async function handleFiles(fileList) {
             if (!user) return;
             const file = fileList[0];
             if (!file || file.type !== 'application/pdf') {
-                showToast('❌ PDF 파일만 업로드 가능합니다.');
+                showToast('❌ PDF 파일만 지원됩니다.');
                 return;
             }
-
-            if (file.size > 1024 * 1024) { // 1MB Limit for Firestore
-                showToast('❌ 1MB 이하의 파일만 지원됩니다.');
+            if (file.size > 1024 * 1024) {
+                showToast('❌ 1MB 이하만 업로드 가능합니다.');
                 return;
             }
 
@@ -401,14 +420,12 @@
                         name: file.name,
                         size: (file.size / 1024).toFixed(1) + ' KB',
                         type: 'application/pdf',
-                        data: base64Data, // Storing small file as base64
+                        data: base64Data,
                         createdAt: Date.now(),
                         userId: user.uid
                     });
-                    showToast('📂 파일 업로드 성공!');
-                } catch (err) {
-                    showToast('❌ 업로드 실패: ' + err.message);
-                }
+                    showToast('📂 업로드 성공!');
+                } catch (err) { showToast('❌ 업로드 실패'); }
             };
             reader.readAsDataURL(file);
         }
@@ -416,7 +433,6 @@
         window.previewFile = function(id) {
             const file = files.find(f => f.id === id);
             if (!file) return;
-            
             document.getElementById('previewTitle').innerText = file.name;
             document.getElementById('pdfFrame').src = file.data;
             document.getElementById('downloadBtn').onclick = () => downloadFile(file.data, file.name);
@@ -424,8 +440,10 @@
         };
 
         window.closePreview = function() {
-            document.getElementById('previewModal').classList.add('hidden');
-            document.getElementById('pdfFrame').src = '';
+            const modal = document.getElementById('previewModal');
+            if (modal) modal.classList.add('hidden');
+            const frame = document.getElementById('pdfFrame');
+            if (frame) frame.src = '';
         };
 
         function downloadFile(dataUrl, fileName) {
@@ -444,7 +462,7 @@
             showToast('파일이 삭제되었습니다.');
         };
 
-        // Render UI
+        // 렌더링 함수
         function renderAll() {
             renderChecklist();
             renderDashboardPreview();
@@ -454,6 +472,7 @@
 
         function renderChecklist() {
             const container = document.getElementById('taskList');
+            if (!container) return;
             container.innerHTML = '';
             const sorted = [...tasks].sort((a, b) => a.createdAt - b.createdAt);
 
@@ -481,7 +500,7 @@
                         </div>
                         ${iconHtml}
                         <div class="notion-text ${task.completed ? 'completed' : ''}">${task.text}</div>
-                        <button onclick="removeTask('${task.id}')" class="opacity-0 group-hover:opacity-100 text-[10px] text-slate-300 hover:text-red-400 p-2 uppercase font-black tracking-tighter">Del</button>
+                        <button onclick="removeTask('${task.id}')" class="opacity-0 group-hover:opacity-100 text-[10px] text-slate-300 hover:text-red-400 p-2 uppercase font-black tracking-tighter">삭제</button>
                     </div>
                 `;
                 container.appendChild(item);
@@ -490,10 +509,11 @@
 
         function renderFileList() {
             const container = document.getElementById('file-list');
+            if (!container) return;
             container.innerHTML = '';
             
             if (files.length === 0) {
-                container.innerHTML = '<div class="p-8 text-center text-slate-300 text-xs italic">업로드된 파일이 없습니다.</div>';
+                container.innerHTML = '<div class="p-8 text-center text-slate-300 text-xs italic">저장된 파일이 없습니다.</div>';
                 return;
             }
 
@@ -511,7 +531,7 @@
                         </div>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="previewFile('${file.id}')" class="px-3 py-1.5 bg-white border border-slate-200 text-[10px] font-black uppercase rounded-lg hover:bg-slate-50">Preview</button>
+                        <button onclick="previewFile('${file.id}')" class="px-3 py-1.5 bg-white border border-slate-200 text-[10px] font-black uppercase rounded-lg hover:bg-slate-50">미리보기</button>
                         <button onclick="removeFile('${file.id}')" class="p-1.5 text-slate-300 hover:text-red-500">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                         </button>
@@ -523,6 +543,7 @@
 
         function renderDashboardPreview() {
             const container = document.getElementById('dashboard-task-list');
+            if (!container) return;
             container.innerHTML = '';
             const recent = [...tasks].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
 
@@ -540,7 +561,7 @@
                         <div class="w-1.5 h-1.5 rounded-full ${task.completed ? 'bg-green-500' : 'bg-amber-400'}"></div>
                         <span class="text-sm font-medium ${task.completed ? 'text-slate-300 line-through' : 'text-slate-600'}">${task.text}</span>
                     </div>
-                    <span class="text-[9px] font-black ${task.completed ? 'text-green-500' : 'text-slate-300'} uppercase group-hover:text-indigo-500 transition-colors">${task.completed ? 'Success' : 'Active'}</span>
+                    <span class="text-[9px] font-black ${task.completed ? 'text-green-500' : 'text-slate-300'} uppercase group-hover:text-indigo-500 transition-colors">${task.completed ? '성공' : '연구중'}</span>
                 `;
                 container.appendChild(div);
             });
@@ -550,42 +571,41 @@
             const total = tasks.length;
             const completed = tasks.filter(t => t.completed).length;
             const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
-            document.getElementById('stat-total').innerText = total;
-            document.getElementById('stat-progress').innerText = progress + '%';
-            document.getElementById('stat-progress-bar').style.width = progress + '%';
-            document.getElementById('stat-files').innerText = files.length;
-        }
+            const statTotal = document.getElementById('stat-total');
+            const statProgress = document.getElementById('stat-progress');
+            const statBar = document.getElementById('stat-progress-bar');
+            const statFiles = document.getElementById('stat-files');
 
-        window.showTab = function(tabId) {
-            ['dashboard', 'tasks', 'resources'].forEach(id => {
-                document.getElementById(`tab-${id}`).classList.toggle('hidden', id !== tabId);
-                document.getElementById(`nav-${id}`).classList.toggle('active', id === tabId);
-            });
-            const titles = { dashboard: 'Dashboard', tasks: 'Checklist', resources: 'Resources' };
-            document.getElementById('current-tab-title').innerText = titles[tabId];
-        };
+            if (statTotal) statTotal.innerText = total;
+            if (statProgress) statProgress.innerText = progress + '%';
+            if (statBar) statBar.style.width = progress + '%';
+            if (statFiles) statFiles.innerText = files.length;
+        }
 
         function showToast(msg) {
             const toast = document.getElementById('toast');
-            document.getElementById('toast-msg').innerText = msg;
-            toast.style.opacity = '1';
-            toast.style.transform = 'translateY(0)';
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translateY(16px)';
-            }, 3000);
+            const toastMsg = document.getElementById('toast-msg');
+            if (toast && toastMsg) {
+                toastMsg.innerText = msg;
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateY(0)';
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateY(16px)';
+                }, 3000);
+            }
         }
 
         function updateClock() {
             const now = new Date();
-            document.getElementById('digital-clock').innerText = now.toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' });
+            const clockEl = document.getElementById('digital-clock');
+            if (clockEl) clockEl.innerText = now.toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' });
         }
         setInterval(updateClock, 1000);
         updateClock();
 
-        document.getElementById('taskInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') addTask();
-        });
+        const taskInput = document.getElementById('taskInput');
+        if (taskInput) taskInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addTask(); });
     </script>
 </body>
 </html>

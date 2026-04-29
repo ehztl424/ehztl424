@@ -3,560 +3,516 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>태준실험실 - Lab OS v3.0</title>
+    <title>태준실험실 - Lab OS v3.9 (대량 업로드 & 필터링)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', 'Pretendard', sans-serif;
-            background-color: #ffffff;
-            color: #37352f;
+        body { font-family: 'Inter', 'Pretendard', sans-serif; background-color: #ffffff; color: #37352f; }
+        #sidebar { transition: transform 0.3s ease-in-out; z-index: 50; }
+        @media (max-width: 768px) {
+            #sidebar { position: fixed; transform: translateX(-100%); height: 100vh; }
+            #sidebar.open { transform: translateX(0); }
+            #main-content { padding-left: 0 !important; }
         }
-        .sidebar-item {
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .sidebar-item:hover {
-            background-color: #f1f5f9;
-        }
-        .sidebar-item.active {
-            background-color: #e2e8f0;
-            color: #4f46e5;
-            font-weight: 700;
-        }
+        .sidebar-item { cursor: pointer; transition: all 0.2s; }
+        .sidebar-item:hover { background-color: #f1f5f9; }
+        .sidebar-item.active { background-color: #e2e8f0; color: #4f46e5; font-weight: 700; }
         
-        /* 노션 스타일 체크리스트 */
-        .notion-item {
-            display: flex;
-            align-items: flex-start;
-            padding: 3px 2px;
-            transition: background 0.1s;
-        }
-        .notion-item:hover {
-            background-color: rgba(55, 53, 47, 0.03);
-        }
-        .notion-checkbox {
-            appearance: none;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #37352f;
-            border-radius: 2px;
-            cursor: pointer;
-            position: relative;
-            margin-top: 4px;
-            flex-shrink: 0;
-        }
-        .notion-checkbox:checked {
-            background-color: #2383e2;
-            border-color: #2383e2;
-        }
-        .notion-checkbox:checked::after {
-            content: '✓';
-            position: absolute;
-            color: white;
-            font-size: 12px;
-            top: -2px;
-            left: 1px;
-        }
-        .notion-text {
-            font-size: 15px;
-            line-height: 1.5;
-            padding: 2px 8px;
-            flex: 1;
-            min-height: 24px;
-            word-break: break-all;
-            outline: none;
-        }
-        .notion-text.completed {
-            text-decoration: line-through;
-            color: rgba(55, 53, 47, 0.4);
-        }
-        .toggle-icon {
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            margin-top: 3px;
-            flex-shrink: 0;
-        }
-        .indent-0 { padding-left: 0px; }
-        .indent-1 { padding-left: 28px; }
-        .indent-2 { padding-left: 56px; }
+        /* 체크리스트 */
+        .notion-item { display: flex; align-items: flex-start; padding: 4px 2px; }
+        .notion-checkbox { appearance: none; width: 18px; height: 18px; border: 2px solid #37352f; border-radius: 2px; cursor: pointer; position: relative; margin-top: 4px; flex-shrink: 0; }
+        .notion-checkbox:checked { background-color: #2383e2; border-color: #2383e2; }
+        .notion-checkbox:checked::after { content: '✓'; position: absolute; color: white; font-size: 14px; top: -3px; left: 1px; }
+        .notion-text { font-size: 16px; line-height: 1.5; padding: 2px 8px; flex: 1; outline: none; }
+        .notion-text.completed { text-decoration: line-through; color: rgba(55, 53, 47, 0.4); }
+
+        /* 입찰 시트 & 필터 */
+        .sheet-container { overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 8px; background: white; max-height: 65vh; }
+        .sheet-table { min-width: 1700px; border-collapse: collapse; font-size: 11px; }
+        .sheet-table th { background: #e0f2fe; color: #0369a1; font-weight: 700; padding: 8px; border: 1px solid #cbd5e1; text-align: center; position: sticky; top: 0; z-index: 10; }
+        .sheet-table td { border: 1px solid #e5e7eb; padding: 4px; vertical-align: middle; }
+        .sheet-table input, .sheet-table select { width: 100%; border: none; background: transparent; outline: none; padding: 4px; font-size: 11px; }
         
-        /* 드래그 앤 드롭 영역 */
-        #drop-zone.active {
-            border-color: #4f46e5;
-            background-color: #f5f3ff;
+        .filter-input { 
+            width: 100%; 
+            margin-top: 4px; 
+            padding: 2px 4px; 
+            font-size: 10px; 
+            border: 1px solid #bae6fd; 
+            border-radius: 4px; 
+            font-weight: normal; 
+            color: #334155;
         }
 
-        /* 미리보기 모달 */
-        .modal-overlay {
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(4px);
-        }
+        .row-status-win { background-color: #fef9c3 !important; }
+        .row-status-submit { background-color: #f0fdf4; }
+        .row-status-fail { background-color: #fef2f2; color: #ef4444; }
 
-        .glass-card {
-            background: #fbfbfa;
-            border: 1px solid #edece9;
-        }
+        .glass-card { background: #fbfbfa; border: 1px solid #edece9; }
+        .modal-overlay { background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); z-index: 100; }
+
+        .ai-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
     </style>
 </head>
 <body class="overflow-hidden">
 
-    <div class="flex h-screen overflow-hidden">
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/30 hidden z-40"></div>
+
+    <div class="flex h-screen overflow-hidden relative">
         <!-- 사이드바 -->
-        <aside class="w-64 bg-[#fbfbfa] border-r border-[#edece9] flex flex-col shrink-0">
-            <div class="p-6">
-                <h1 class="text-lg font-bold text-slate-800 flex items-center gap-2 cursor-pointer" onclick="showTab('dashboard')">
+        <aside id="sidebar" class="w-72 bg-[#fbfbfa] border-r border-[#edece9] flex flex-col shrink-0">
+            <div class="p-6 flex justify-between items-center">
+                <h1 class="text-lg font-bold text-slate-800 flex items-center gap-2 cursor-pointer" onclick="showTab('dashboard');">
                     <span class="text-2xl">🧪</span>
                     태준실험실
                 </h1>
+                <button class="md:hidden text-slate-400" onclick="toggleSidebar()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
             </div>
             <nav class="flex-1 px-4 space-y-1">
-                <div onclick="showTab('dashboard')" id="nav-dashboard" class="sidebar-item active flex items-center gap-3 p-2 rounded-md text-sm">
+                <div onclick="showTab('dashboard');" id="nav-dashboard" class="sidebar-item active flex items-center gap-3 p-3 rounded-md text-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                     종합 대시보드
                 </div>
-                <div onclick="showTab('tasks')" id="nav-tasks" class="sidebar-item flex items-center gap-3 p-2 rounded-md text-sm">
+                <div onclick="showTab('tasks');" id="nav-tasks" class="sidebar-item flex items-center gap-3 p-3 rounded-md text-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                     할 일 관리
                 </div>
-                <div onclick="showTab('resources')" id="nav-resources" class="sidebar-item flex items-center gap-3 p-2 rounded-md text-sm">
+                <div onclick="showTab('bidding');" id="nav-bidding" class="sidebar-item flex items-center gap-3 p-3 rounded-md text-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>
+                    입찰 참여 시트
+                </div>
+                <div onclick="showTab('resources');" id="nav-resources" class="sidebar-item flex items-center gap-3 p-3 rounded-md text-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     자료 저장소
                 </div>
             </nav>
-            <div class="p-4 border-t border-[#edece9]">
-                <div class="flex items-center gap-3 p-2">
-                    <div class="w-7 h-7 rounded bg-indigo-600 flex items-center justify-center text-white font-bold text-[10px]">TJ</div>
-                    <div class="text-[11px] overflow-hidden">
-                        <p class="font-bold">태준 연구원</p>
-                        <p class="text-slate-400 truncate w-32">로컬 저장소 모드</p>
+            <div class="p-6 border-t border-[#edece9]">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center text-white font-bold text-xs italic">AI</div>
+                    <div class="text-xs">
+                        <p class="font-bold text-slate-800">AI 연구원 상주</p>
+                        <p class="text-[10px] text-indigo-500 font-bold uppercase tracking-tighter">Gemini 2.5 Flash</p>
                     </div>
                 </div>
             </div>
         </aside>
 
         <!-- 메인 콘텐츠 -->
-        <main class="flex-1 overflow-y-auto bg-white">
-            <header class="bg-white/80 backdrop-blur-md border-b border-[#edece9] sticky top-0 z-30 px-8 py-4 flex justify-between items-center">
-                <div>
-                    <h2 id="current-tab-title" class="text-sm font-bold text-slate-500 uppercase tracking-widest">대시보드</h2>
-                    <p id="digital-clock" class="text-[11px] text-slate-400 mt-0.5"></p>
+        <main id="main-content" class="flex-1 overflow-y-auto bg-white w-full">
+            <header class="bg-white/90 backdrop-blur-md border-b border-[#edece9] sticky top-0 z-30 px-4 md:px-8 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <button class="md:hidden p-1 text-slate-600" onclick="toggleSidebar()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                    </button>
+                    <div>
+                        <h2 id="current-tab-title" class="text-sm font-bold text-slate-500 uppercase tracking-widest">대시보드</h2>
+                        <p id="digital-clock" class="text-[10px] text-slate-400"></p>
+                    </div>
                 </div>
-                <div id="sync-status" class="text-[10px] font-bold text-indigo-500 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
-                    로컬 데이터 안전함
+                <div class="hidden sm:flex gap-2">
+                    <button onclick="exportData()" class="text-[10px] font-bold bg-slate-100 px-3 py-1 rounded-full text-slate-600 hover:bg-slate-200 transition-colors">데이터 백업</button>
+                    <button onclick="importData()" class="text-[10px] font-bold bg-slate-100 px-3 py-1 rounded-full text-slate-600 hover:bg-slate-200 transition-colors">데이터 복구</button>
                 </div>
             </header>
 
-            <div class="p-8 lg:p-16 max-w-5xl mx-auto">
-                <!-- [1] 대시보드 탭 -->
-                <section id="tab-dashboard" class="space-y-12 animate-in fade-in duration-500">
-                    <div class="space-y-2">
-                        <h1 class="text-4xl font-bold tracking-tight text-slate-900">실험실 브리핑</h1>
-                        <p class="text-slate-500">브라우저 로컬 저장소를 활용한 오프라인 대시보드입니다.</p>
+            <div class="p-4 md:p-8 lg:p-12 max-w-7xl mx-auto">
+                <!-- [1] 대시보드 -->
+                <section id="tab-dashboard" class="space-y-8 animate-in fade-in">
+                    <h1 class="text-3xl font-bold text-slate-900 tracking-tight">연구실 현황</h1>
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        <div class="glass-card p-5 rounded-2xl"><p class="text-[10px] font-bold text-slate-400 uppercase mb-2">전체 과제</p><h3 id="stat-total" class="text-3xl font-bold">0</h3></div>
+                        <div class="glass-card p-5 rounded-2xl"><p class="text-[10px] font-bold text-slate-400 uppercase mb-2">입찰 참여건</p><h3 id="stat-bids" class="text-3xl font-bold text-indigo-600">0</h3></div>
+                        <div class="glass-card p-5 rounded-2xl text-green-600"><p class="text-[10px] font-bold text-slate-400 uppercase mb-2 text-slate-400">낙찰 성공률</p><h3 id="stat-progress" class="text-3xl font-bold">0%</h3></div>
+                        <div class="glass-card p-5 rounded-2xl"><p class="text-[10px] font-bold text-slate-400 uppercase mb-2">저장 파일</p><h3 id="stat-files" class="text-3xl font-bold">0</h3></div>
                     </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="glass-card p-6 rounded-2xl">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">전체 과제</p>
-                            <h3 id="stat-total" class="text-3xl font-bold">0</h3>
-                        </div>
-                        <div class="glass-card p-6 rounded-2xl text-green-600">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-2 text-slate-400">성공률</p>
-                            <h3 id="stat-progress" class="text-3xl font-bold">0%</h3>
-                            <div class="mt-4 w-full bg-slate-200 rounded-full h-1 overflow-hidden">
-                                <div id="stat-progress-bar" class="bg-green-500 h-full transition-all duration-1000" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        <div class="glass-card p-6 rounded-2xl">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">저장된 파일</p>
-                            <h3 id="stat-files" class="text-3xl font-bold">0</h3>
-                        </div>
-                    </div>
-
-                    <div class="space-y-4">
-                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                            <span class="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
-                            최근 업데이트 과제
-                        </h4>
-                        <div id="dashboard-task-list" class="space-y-1 border-t border-[#edece9] pt-4">
-                            <!-- 대시보드 프리뷰 -->
-                        </div>
-                    </div>
+                    <div id="dashboard-task-list" class="space-y-2 pt-4 border-t border-slate-100"></div>
                 </section>
 
-                <!-- [2] 할 일 관리 탭 -->
-                <section id="tab-tasks" class="hidden space-y-8 animate-in slide-in-from-right-4 duration-500">
-                    <div class="space-y-2">
-                        <h1 class="text-4xl font-bold tracking-tight text-slate-900">오늘의 할 일</h1>
-                        <p class="text-slate-500">노션의 계층 구조를 구현한 체크리스트입니다.</p>
+                <!-- [2] 할 일 관리 -->
+                <section id="tab-tasks" class="hidden space-y-6 animate-in slide-in-from-right-4">
+                    <h1 class="text-3xl font-bold text-slate-900 tracking-tight">오늘의 할 일</h1>
+                    <div class="flex gap-2 pb-4 border-b border-slate-100">
+                        <input type="text" id="taskInput" placeholder="새로운 할 일을 입력하세요..." class="flex-1 px-0 py-2 border-none focus:ring-0 text-xl font-medium placeholder-slate-200">
+                        <button onclick="addTask()" class="bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-indigo-700 transition-all">추가</button>
                     </div>
-
-                    <div class="flex gap-2 pb-6 border-b border-slate-100">
-                        <input type="text" id="taskInput" placeholder="무엇을 할까요? (엔터 입력)" class="flex-1 px-0 py-2 border-none focus:ring-0 text-xl font-medium placeholder-slate-200">
-                        <button onclick="addTask()" class="bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">추가</button>
-                    </div>
-
-                    <div id="taskList" class="space-y-0.5">
-                        <!-- 체크리스트 항목 -->
-                    </div>
+                    <div id="taskList" class="space-y-1"></div>
                 </section>
 
-                <!-- [3] 자료 저장소 탭 -->
-                <section id="tab-resources" class="hidden space-y-8 animate-in slide-in-from-right-4 duration-500">
-                    <div class="space-y-2">
-                        <h1 class="text-4xl font-bold tracking-tight text-slate-900">자료 저장소</h1>
-                        <p class="text-slate-500">PDF 파일을 드래그하여 업로드하고 미리보기를 이용하세요.</p>
-                    </div>
-
-                    <div id="drop-zone" class="border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center transition-all flex flex-col items-center justify-center gap-4 bg-slate-50/50">
-                        <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm text-slate-400">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                        </div>
+                <!-- [3] 입찰 참여 시트 -->
+                <section id="tab-bidding" class="hidden space-y-6 animate-in slide-in-from-right-4">
+                    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
                         <div>
-                            <p class="font-bold text-slate-800">파일을 이쪽으로 끌어다 놓으세요</p>
-                            <p class="text-xs text-slate-400 mt-1">PDF 파일만 지원됩니다 (최대 4MB 권장)</p>
+                            <h1 class="text-3xl font-bold text-slate-900 tracking-tight">입찰 참여 시트</h1>
+                            <p class="text-slate-500 text-xs mt-1 italic">엑셀에서 데이터를 복사해서 한 번에 붙여넣을 수 있습니다.</p>
                         </div>
-                        <input type="file" id="fileInput" class="hidden" accept="application/pdf">
-                        <button onclick="document.getElementById('fileInput').click()" class="mt-2 text-[11px] font-black text-indigo-600 uppercase tracking-widest hover:underline">파일 직접 선택하기</button>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="openPasteModal()" class="bg-green-50 text-green-700 border border-green-200 px-4 py-2 rounded-lg text-xs font-black hover:bg-green-100 transition-colors">📋 엑셀 데이터 붙여넣기</button>
+                            <button onclick="analyzeBidsWithAI()" id="ai-btn" class="bg-indigo-50 text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-xs font-black hover:bg-indigo-100 transition-colors">✨ AI 스크리닝</button>
+                            <button onclick="addBidRow()" class="bg-slate-800 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-700">+ 행 추가</button>
+                            <button onclick="saveBids()" class="bg-indigo-600 text-white px-6 py-2 rounded-lg text-xs font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all">전체 저장</button>
+                        </div>
                     </div>
 
-                    <div class="space-y-4">
-                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest">저장된 연구 자료</h4>
-                        <div id="file-list" class="grid grid-cols-1 gap-3">
-                            <!-- 파일 렌더링 -->
+                    <!-- AI 인사이트 패널 -->
+                    <div id="ai-insight-panel" class="hidden glass-card p-6 rounded-2xl border-2 border-indigo-100 bg-indigo-50/30 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-sm font-black text-indigo-700 flex items-center gap-2">✨ AI 연구원 스크리닝 리포트</h4>
+                            <button onclick="document.getElementById('ai-insight-panel').classList.add('hidden')" class="text-slate-400 text-xs font-bold">닫기</button>
                         </div>
+                        <div id="ai-content" class="text-xs leading-relaxed text-slate-700 whitespace-pre-wrap"></div>
                     </div>
+
+                    <div class="sheet-container border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <table class="sheet-table">
+                            <thead>
+                                <tr id="filter-row">
+                                    <th width="100">진행상태<input type="text" class="filter-input" oninput="applyFilters('status', this.value)" placeholder="필터..."></th>
+                                    <th width="100">분야<input type="text" class="filter-input" oninput="applyFilters('category', this.value)" placeholder="필터..."></th>
+                                    <th width="150">발주처<input type="text" class="filter-input" oninput="applyFilters('client', this.value)" placeholder="필터..."></th>
+                                    <th width="300">공고명<input type="text" class="filter-input" oninput="applyFilters('title', this.value)" placeholder="필터..."></th>
+                                    <th width="120">예산<input type="text" class="filter-input" oninput="applyFilters('budget', this.value)" placeholder="필터..."></th>
+                                    <th width="100">투찰법인<input type="text" class="filter-input" oninput="applyFilters('company', this.value)" placeholder="필터..."></th>
+                                    <th width="120">제출일<input type="text" class="filter-input" oninput="applyFilters('date', this.value)" placeholder="필터..."></th>
+                                    <th width="100">부서<input type="text" class="filter-input" oninput="applyFilters('dept', this.value)" placeholder="필터..."></th>
+                                    <th width="100">작성자<input type="text" class="filter-input" oninput="applyFilters('author', this.value)" placeholder="필터..."></th>
+                                    <th width="120">투찰금액<input type="text" class="filter-input" oninput="applyFilters('bidAmount', this.value)" placeholder="필터..."></th>
+                                    <th width="120">PT 방식<input type="text" class="filter-input" oninput="applyFilters('ptStatus', this.value)" placeholder="필터..."></th>
+                                    <th width="150">PT 일시<input type="text" class="filter-input" oninput="applyFilters('ptTime', this.value)" placeholder="필터..."></th>
+                                    <th width="120">낙찰업체<input type="text" class="filter-input" oninput="applyFilters('winner', this.value)" placeholder="필터..."></th>
+                                    <th width="50">삭제</th>
+                                </tr>
+                            </thead>
+                            <tbody id="biddingTableBody"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- [4] 자료 저장소 -->
+                <section id="tab-resources" class="hidden space-y-6 animate-in slide-in-from-right-4">
+                    <h1 class="text-3xl font-bold text-slate-900 tracking-tight">자료 저장소</h1>
+                    <div id="drop-zone" class="border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center flex flex-col items-center justify-center gap-4 bg-slate-50/50 transition-all">
+                        <p class="font-bold text-slate-800 text-sm">PDF 파일을 여기에 드롭</p>
+                        <input type="file" id="fileInput" class="hidden" accept="application/pdf">
+                        <button onclick="document.getElementById('fileInput').click()" class="text-xs font-bold text-indigo-600 hover:underline">파일 선택하기</button>
+                    </div>
+                    <div id="file-list" class="grid grid-cols-1 gap-3"></div>
                 </section>
             </div>
         </main>
     </div>
 
-    <!-- 미리보기 모달 -->
-    <div id="previewModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 modal-overlay" onclick="closePreview()"></div>
-        <div class="bg-white w-full max-w-5xl h-[85vh] rounded-3xl overflow-hidden shadow-2xl relative z-10 flex flex-col">
-            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
-                <h3 id="previewTitle" class="font-bold text-slate-800 text-sm">미리보기</h3>
-                <div class="flex gap-2">
-                    <button id="downloadBtn" class="px-4 py-2 bg-indigo-600 text-white text-[11px] font-bold rounded-xl hover:bg-indigo-700 uppercase">다운로드</button>
-                    <button onclick="closePreview()" class="px-4 py-2 bg-slate-100 text-slate-600 text-[11px] font-bold rounded-xl hover:bg-slate-200 uppercase">닫기</button>
-                </div>
+    <!-- 대량 붙여넣기 모달 -->
+    <div id="pasteModal" class="hidden fixed inset-0 z-[150] flex items-center justify-center p-4">
+        <div class="absolute inset-0 modal-overlay" onclick="closePasteModal()"></div>
+        <div class="bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl relative z-10 flex flex-col">
+            <div class="p-6 border-b border-slate-100 bg-slate-50">
+                <h3 class="font-bold text-slate-800">엑셀 데이터 대량 붙여넣기</h3>
+                <p class="text-[11px] text-slate-400 mt-1">엑셀에서 복사한 데이터를 아래 칸에 붙여넣고 [데이터 파싱] 버튼을 누르세요.</p>
             </div>
-            <div class="flex-1 bg-slate-100 relative">
-                <iframe id="pdfFrame" class="w-full h-full border-none" src=""></iframe>
+            <div class="p-6">
+                <textarea id="pasteArea" class="w-full h-64 p-4 text-xs border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="여기에 붙여넣기..."></textarea>
+                <div class="mt-6 flex gap-3">
+                    <button onclick="parseExcelData()" class="flex-1 bg-indigo-600 text-white py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-all">데이터 파싱 및 추가</button>
+                    <button onclick="closePasteModal()" class="px-8 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all">취소</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 토스트 알림 -->
-    <div id="toast" class="fixed bottom-8 right-8 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl transition-all opacity-0 pointer-events-none transform translate-y-4 z-50">
-        <p id="toast-msg" class="text-[11px] font-bold tracking-tight"></p>
+    <!-- 미리보기 모달 -->
+    <div id="previewModal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div class="absolute inset-0 modal-overlay" onclick="closePreview()"></div>
+        <div class="bg-white w-full max-w-5xl h-[90vh] rounded-2xl overflow-hidden shadow-2xl relative z-10 flex flex-col">
+            <div class="p-4 border-b flex justify-between items-center"><h3 id="previewTitle" class="font-bold text-sm">미리보기</h3><button onclick="closePreview()" class="text-slate-400 font-bold px-4">닫기</button></div>
+            <iframe id="pdfFrame" class="w-full h-full border-none"></iframe>
+        </div>
     </div>
 
+    <!-- 토스트 알림 -->
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 md:left-auto md:right-8 md:translate-x-0 bg-slate-900 text-white px-6 py-3 rounded-2xl opacity-0 transition-all z-[110]"><p id="toast-msg" class="text-[11px] font-bold"></p></div>
+    <input type="file" id="importInput" class="hidden" accept=".json">
+
     <script>
-        /**
-         * v3.0 - 로컬 저장소 기반 태준실험실
-         * 외부 종속성 제거 및 안전한 데이터 관리
-         */
+        // --- Gemini AI 연결 ---
+        const apiKey = ""; 
 
-        // --- 전역 함수: 탭 전환 ---
-        window.showTab = function(tabId) {
-            const tabs = ['dashboard', 'tasks', 'resources'];
-            tabs.forEach(id => {
-                const tabEl = document.getElementById(`tab-${id}`);
-                const navEl = document.getElementById(`nav-${id}`);
-                if (tabEl) tabEl.classList.toggle('hidden', id !== tabId);
-                if (navEl) navEl.classList.toggle('active', id === tabId);
-            });
-            const titles = { dashboard: '대시보드', tasks: '할 일 관리', resources: '자료 저장소' };
-            const titleEl = document.getElementById('current-tab-title');
-            if (titleEl) titleEl.innerText = titles[tabId] || tabId;
-        };
+        async function analyzeBidsWithAI() {
+            const filteredBids = getFilteredBids();
+            if (filteredBids.length === 0) {
+                showToast("분석할 데이터가 없습니다.");
+                return;
+            }
 
-        // 데이터 상태
+            const btn = document.getElementById('ai-btn');
+            const content = document.getElementById('ai-content');
+            const panel = document.getElementById('ai-insight-panel');
+
+            btn.disabled = true;
+            panel.classList.remove('hidden');
+            content.innerText = "데이터를 정밀 스크리닝 중입니다...";
+
+            const bidSummary = filteredBids.map(b => `- 공고: ${b.title}, 발주처: ${b.client}, 투찰금액: ${b.bidAmount}, 상태: ${b.status}`).join('\n');
+
+            const systemPrompt = `입찰 전문 컨설턴트로서 데이터를 스크리닝하세요:
+            1. 현재 프로젝트 진행 현황 및 누락된 정보 지적
+            2. 예산 대비 투찰금액의 적정성 분석 (비판적 관점)
+            3. 낙찰 확률을 높이기 위한 PT 및 투찰 전략 제언
+            매우 전문적인 한국어로 답변하세요.`;
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: `데이터 요약:\n${bidSummary}` }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] }
+                    })
+                });
+                const result = await response.json();
+                const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                content.innerText = text || "분석 결과를 가져오지 못했습니다.";
+            } catch (err) {
+                content.innerText = "AI 서버 연결 오류가 발생했습니다.";
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // --- 데이터 상태 및 필터 ---
         let tasks = JSON.parse(localStorage.getItem('tj_tasks')) || [];
         let files = JSON.parse(localStorage.getItem('tj_files')) || [];
+        let bids = JSON.parse(localStorage.getItem('tj_bids')) || [];
+        let activeFilters = {};
 
-        function saveTasks() {
-            localStorage.setItem('tj_tasks', JSON.stringify(tasks));
-            renderAll();
-        }
-
-        function saveFiles() {
-            localStorage.setItem('tj_files', JSON.stringify(files));
-            renderFileList();
-            updateStats();
-        }
-
-        // 할 일 관리
-        window.addTask = function() {
-            const input = document.getElementById('taskInput');
-            if (!input || input.value.trim() === '') return;
-            
-            const newTask = {
-                id: Date.now().toString(),
-                text: input.value,
-                completed: false,
-                depth: 0,
-                type: 'todo',
-                createdAt: Date.now()
-            };
-
-            tasks.push(newTask);
-            input.value = '';
-            saveTasks();
-            showToast('🧪 과제 추가 완료');
-        };
-
-        window.toggleTask = function(id) {
-            tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
-            saveTasks();
-        };
-
-        window.updateIndent = function(id, direction) {
-            tasks = tasks.map(t => {
-                if (t.id === id) {
-                    const newDepth = Math.max(0, Math.min(2, t.depth + direction));
-                    return { ...t, depth: newDepth };
-                }
-                return t;
-            });
-            saveTasks();
-        };
-
-        window.toggleType = function(id) {
-            tasks = tasks.map(t => {
-                if (t.id === id) {
-                    return { ...t, type: t.type === 'todo' ? 'toggle' : 'todo' };
-                }
-                return t;
-            });
-            saveTasks();
-        };
-
-        window.removeTask = function(id) {
-            tasks = tasks.filter(t => t.id !== id);
-            saveTasks();
-            showToast('🚮 과제 삭제됨');
-        };
-
-        // 파일 관리
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('fileInput');
-
-        if (dropZone) {
-            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('active'); });
-            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('active'));
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('active');
-                handleFiles(e.dataTransfer.files);
-            });
-        }
-        if (fileInput) fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
-
-        function handleFiles(fileList) {
-            const file = fileList[0];
-            if (!file || file.type !== 'application/pdf') {
-                showToast('❌ PDF 파일만 지원됩니다.');
-                return;
-            }
-            if (file.size > 5 * 1024 * 1024) { // 5MB Limit for LocalStorage
-                showToast('❌ 5MB 이하의 파일만 권장됩니다.');
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const base64Data = e.target.result;
-                const newFile = {
-                    id: Date.now().toString(),
-                    name: file.name,
-                    size: (file.size / 1024).toFixed(1) + ' KB',
-                    data: base64Data,
-                    createdAt: Date.now()
+        function saveTasks() { localStorage.setItem('tj_tasks', JSON.stringify(tasks)); renderAll(); }
+        function saveFiles() { localStorage.setItem('tj_files', JSON.stringify(files)); renderFileList(); updateStats(); }
+        window.saveBids = function() { 
+            const rows = document.querySelectorAll('#biddingTableBody tr');
+            const currentBids = Array.from(rows).map(row => {
+                const inputs = row.querySelectorAll('input, select');
+                return { 
+                    id: row.dataset.id, status: inputs[0].value, category: inputs[1].value, client: inputs[2].value, title: inputs[3].value, 
+                    budget: inputs[4].value, company: inputs[5].value, date: inputs[6].value, dept: inputs[7].value, author: inputs[8].value, 
+                    bidAmount: inputs[9].value, ptStatus: inputs[10].value, ptTime: inputs[11].value, winner: inputs[12].value 
                 };
-                files.push(newFile);
-                saveFiles();
-                showToast('📂 업로드 성공!');
-            };
-            reader.readAsDataURL(file);
+            });
+            // 필터링되지 않은 원본 데이터와 병합 로직 (간소화를 위해 현재 보이는 데이터로 원본 업데이트)
+            // 실제 서비스에서는 원본 배열을 따로 관리하며 병합해야 하지만, 여기서는 간편하게 현재 보이는 리스트를 기준으로 세션 동기화
+            const mergedBids = [...bids];
+            currentBids.forEach(cb => {
+                const idx = mergedBids.findIndex(mb => mb.id === cb.id);
+                if (idx !== -1) mergedBids[idx] = cb;
+            });
+            bids = mergedBids;
+
+            localStorage.setItem('tj_bids', JSON.stringify(bids)); 
+            showToast('데이터 저장 완료'); renderBids(); updateStats();
+        };
+
+        // --- 필터링 로직 ---
+        window.applyFilters = function(column, value) {
+            if (!value) delete activeFilters[column];
+            else activeFilters[column] = value.toLowerCase();
+            renderBids();
+        };
+
+        function getFilteredBids() {
+            return bids.filter(bid => {
+                return Object.keys(activeFilters).every(key => {
+                    return String(bid[key] || '').toLowerCase().includes(activeFilters[key]);
+                });
+            });
         }
 
+        // --- 입찰 시트 렌더링 ---
+        function renderBids() {
+            const body = document.getElementById('biddingTableBody');
+            body.innerHTML = '';
+            const filtered = getFilteredBids();
+
+            filtered.forEach(bid => {
+                const tr = document.createElement('tr'); tr.dataset.id = bid.id;
+                if (bid.status === '낙찰') tr.className = 'row-status-win';
+                else if (bid.status === '제출완료') tr.className = 'row-status-submit';
+                else if (bid.status === '탈락') tr.className = 'row-status-fail';
+                tr.innerHTML = `
+                    <td><select><option ${bid.status=='진행중'?'selected':''}>진행중</option><option ${bid.status=='제출완료'?'selected':''}>제출완료</option><option ${bid.status=='낙찰'?'selected':''}>낙찰</option><option ${bid.status=='탈락'?'selected':''}>탈락</option></select></td>
+                    <td><input value="${bid.category || ''}"></td><td><input value="${bid.client || ''}"></td><td><input value="${bid.title || ''}"></td>
+                    <td><input value="${bid.budget || ''}"></td><td><input value="${bid.company || ''}"></td><td><input type="date" value="${bid.date || ''}"></td>
+                    <td><input value="${bid.dept || ''}"></td><td><input value="${bid.author || ''}"></td><td><input value="${bid.bidAmount || ''}"></td>
+                    <td><input value="${bid.ptStatus || ''}"></td><td><input value="${bid.ptTime || ''}"></td><td><input value="${bid.winner || ''}"></td>
+                    <td class="text-center"><button onclick="removeBidRow('${bid.id}')" class="text-slate-300 hover:text-red-500 font-bold">×</button></td>
+                `;
+                body.appendChild(tr);
+            });
+        }
+
+        // --- 엑셀 대량 파싱 ---
+        window.openPasteModal = () => document.getElementById('pasteModal').classList.remove('hidden');
+        window.closePasteModal = () => {
+            document.getElementById('pasteModal').classList.add('hidden');
+            document.getElementById('pasteArea').value = '';
+        };
+
+        window.parseExcelData = function() {
+            const data = document.getElementById('pasteArea').value;
+            if (!data.trim()) return;
+
+            const rows = data.split('\n');
+            const newEntries = rows.map(row => {
+                const cols = row.split('\t');
+                if (cols.length < 2) return null; // 유효하지 않은 행 무시
+                return {
+                    id: (Date.now() + Math.random()).toString(),
+                    status: cols[0] || '진행중',
+                    category: cols[1] || '',
+                    client: cols[2] || '',
+                    title: cols[3] || '',
+                    budget: cols[4] || '',
+                    company: cols[5] || '',
+                    date: cols[6] || '',
+                    dept: cols[7] || '',
+                    author: cols[8] || '',
+                    bidAmount: cols[9] || '',
+                    ptStatus: cols[10] || '',
+                    ptTime: cols[11] || '',
+                    winner: cols[12] || ''
+                };
+            }).filter(e => e !== null);
+
+            bids = [...newEntries, ...bids];
+            localStorage.setItem('tj_bids', JSON.stringify(bids));
+            closePasteModal();
+            renderBids();
+            updateStats();
+            showToast(`${newEntries.length}건의 데이터가 추가되었습니다.`);
+        };
+
+        // --- UI 유틸리티 ---
+        function toggleSidebar() { 
+            const sb = document.getElementById('sidebar');
+            const ol = document.getElementById('sidebar-overlay');
+            sb.classList.toggle('open');
+            ol.classList.toggle('hidden');
+        }
+
+        window.showTab = function(tabId) {
+            ['dashboard', 'tasks', 'bidding', 'resources'].forEach(id => {
+                document.getElementById(`tab-${id}`).classList.toggle('hidden', id !== tabId);
+                document.getElementById(`nav-${id}`).classList.toggle('active', id === tabId);
+            });
+            document.getElementById('current-tab-title').innerText = { dashboard: '종합 대시보드', tasks: '할 일 관리', bidding: '입찰 참여 시트', resources: '자료 저장소' }[tabId];
+            if (tabId === 'bidding') renderBids();
+        };
+
+        window.addBidRow = function() { 
+            bids.unshift({ id: Date.now().toString(), status: '진행중' }); 
+            renderBids(); 
+        };
+        window.removeBidRow = function(id) { bids = bids.filter(b => b.id != id); renderBids(); updateStats(); };
+
+        window.addTask = function() { 
+            const input = document.getElementById('taskInput'); 
+            if (!input.value.trim()) return; 
+            tasks.push({ id: Date.now().toString(), text: input.value, completed: false, createdAt: Date.now() }); 
+            input.value = ''; saveTasks(); 
+        };
+        window.toggleTask = function(id) { tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t); saveTasks(); };
+        window.removeTask = function(id) { tasks = tasks.filter(t => t.id !== id); saveTasks(); };
+
+        // --- 백업 & 복구 ---
+        window.exportData = function() {
+            const data = { tasks, files, bids };
+            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = `태준실험실_백업.json`; a.click();
+        };
+        window.importData = function() { document.getElementById('importInput').click(); };
+        document.getElementById('importInput').onchange = function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader(); 
+            reader.onload = function(e) {
+                const data = JSON.parse(e.target.result);
+                tasks = data.tasks || []; files = data.files || []; bids = data.bids || [];
+                localStorage.setItem('tj_tasks', JSON.stringify(tasks));
+                localStorage.setItem('tj_files', JSON.stringify(files));
+                localStorage.setItem('tj_bids', JSON.stringify(bids));
+                location.reload();
+            }; reader.readAsText(file);
+        };
+
+        // --- 파일 관리 ---
+        const fileInput = document.getElementById('fileInput');
+        fileInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file || file.type !== 'application/pdf') return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                files.push({ id: Date.now().toString(), name: file.name, data: e.target.result, createdAt: Date.now() });
+                saveFiles();
+            }; reader.readAsDataURL(file);
+        };
         window.previewFile = function(id) {
-            const file = files.find(f => f.id === id);
-            if (!file) return;
-            document.getElementById('previewTitle').innerText = file.name;
-            document.getElementById('pdfFrame').src = file.data;
-            document.getElementById('downloadBtn').onclick = () => downloadFile(file.data, file.name);
+            const f = files.find(file => file.id === id);
+            document.getElementById('previewTitle').innerText = f.name;
+            document.getElementById('pdfFrame').src = f.data;
             document.getElementById('previewModal').classList.remove('hidden');
         };
+        window.closePreview = () => document.getElementById('previewModal').classList.add('hidden');
+        window.removeFile = (id) => { files = files.filter(f => f.id !== id); saveFiles(); };
 
-        window.closePreview = function() {
-            document.getElementById('previewModal').classList.add('hidden');
-            document.getElementById('pdfFrame').src = '';
-        };
-
-        function downloadFile(dataUrl, fileName) {
-            const link = document.createElement('a');
-            link.href = dataUrl;
-            link.download = fileName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        window.removeFile = function(id) {
-            files = files.filter(f => f.id !== id);
-            saveFiles();
-            showToast('파일이 삭제되었습니다.');
-        };
-
-        // 렌더링
+        // --- 렌더링 시스템 ---
         function renderAll() {
-            renderChecklist();
-            renderDashboardPreview();
-            updateStats();
-        }
-
-        function renderChecklist() {
-            const container = document.getElementById('taskList');
-            if (!container) return;
-            container.innerHTML = '';
-            
+            const container = document.getElementById('taskList'); container.innerHTML = '';
             tasks.forEach(task => {
-                const item = document.createElement('div');
-                item.className = `notion-item indent-${task.depth} group`;
-                
-                let iconHtml = '';
-                if (task.type === 'todo') {
-                    iconHtml = `<input type="checkbox" class="notion-checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask('${task.id}')">`;
-                } else {
-                    iconHtml = `<div class="toggle-icon" onclick="toggleTask('${task.id}')">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="${task.completed ? '#37352f' : 'none'}" stroke="#37352f" stroke-width="3" style="transform: ${task.completed ? 'rotate(90deg)' : 'rotate(0deg)'}; transition: transform 0.2s;">
-                            <path d="M5 3l14 9-14 9V3z"/>
-                        </svg>
-                    </div>`;
-                }
-
-                item.innerHTML = `
-                    <div class="flex items-start w-full">
-                        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pr-2 shrink-0">
-                            <button onclick="updateIndent('${task.id}', -1)" class="text-[10px] text-slate-300 hover:text-slate-600">◀</button>
-                            <button onclick="updateIndent('${task.id}', 1)" class="text-[10px] text-slate-300 hover:text-slate-600">▶</button>
-                            <button onclick="toggleType('${task.id}')" class="text-[10px] text-slate-300 hover:text-slate-600">⇄</button>
-                        </div>
-                        ${iconHtml}
-                        <div class="notion-text ${task.completed ? 'completed' : ''}">${task.text}</div>
-                        <button onclick="removeTask('${task.id}')" class="opacity-0 group-hover:opacity-100 text-[10px] text-slate-300 hover:text-red-400 p-2 uppercase font-black tracking-tighter">삭제</button>
-                    </div>
-                `;
-                container.appendChild(item);
+                const div = document.createElement('div'); div.className = `notion-item group`;
+                div.innerHTML = `<input type="checkbox" class="notion-checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTask('${task.id}')"><div class="notion-text ${task.completed ? 'completed' : ''}">${task.text}</div><button onclick="removeTask('${task.id}')" class="opacity-0 group-hover:opacity-100 text-red-400 p-2 text-[10px] font-bold">삭제</button>`;
+                container.appendChild(div);
             });
+            renderDashboardPreview(); updateStats();
         }
 
         function renderFileList() {
-            const container = document.getElementById('file-list');
-            if (!container) return;
-            container.innerHTML = '';
-            
-            if (files.length === 0) {
-                container.innerHTML = '<div class="p-8 text-center text-slate-300 text-xs italic">저장된 파일이 없습니다.</div>';
-                return;
-            }
-
+            const container = document.getElementById('file-list'); container.innerHTML = files.length ? '' : '<div class="p-8 text-center text-slate-300 text-xs italic">저장된 파일 없음</div>';
             files.forEach(file => {
-                const card = document.createElement('div');
-                card.className = "flex items-center justify-between p-4 bg-slate-50/50 border border-[#edece9] rounded-2xl hover:bg-white hover:shadow-sm transition-all";
-                card.innerHTML = `
-                    <div class="flex items-center gap-3 overflow-hidden">
-                        <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 shrink-0">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        </div>
-                        <div class="overflow-hidden">
-                            <p class="font-bold text-sm text-slate-700 truncate">${file.name}</p>
-                            <p class="text-[10px] text-slate-400 uppercase font-black tracking-wider">${file.size} • ${new Date(file.createdAt).toLocaleDateString()}</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="previewFile('${file.id}')" class="px-3 py-1.5 bg-white border border-slate-200 text-[10px] font-black uppercase rounded-lg hover:bg-slate-50">미리보기</button>
-                        <button onclick="removeFile('${file.id}')" class="p-1.5 text-slate-300 hover:text-red-500">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                        </button>
-                    </div>
-                `;
+                const card = document.createElement('div'); card.className = "flex items-center justify-between p-4 bg-slate-50 border rounded-2xl";
+                card.innerHTML = `<div class="flex items-center gap-3 overflow-hidden"><div class="w-8 h-8 bg-indigo-100 rounded flex items-center justify-center text-indigo-500 shrink-0 text-[10px] font-black">PDF</div><p class="font-bold text-xs truncate">${file.name}</p></div><div class="flex gap-1"><button onclick="previewFile('${file.id}')" class="px-2 py-1 bg-white border text-[9px] font-bold rounded">미리보기</button><button onclick="removeFile('${file.id}')" class="p-1 text-red-400">×</button></div>`;
                 container.appendChild(card);
             });
         }
 
         function renderDashboardPreview() {
             const container = document.getElementById('dashboard-task-list');
-            if (!container) return;
-            container.innerHTML = '';
-            const recent = [...tasks].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
-
-            if (recent.length === 0) {
-                container.innerHTML = `<div class="py-12 text-center text-slate-300 text-xs italic tracking-tighter">진행 중인 과제가 없습니다.</div>`;
-                return;
-            }
-
-            recent.forEach(task => {
-                const div = document.createElement('div');
-                div.className = "flex items-center justify-between py-3 group cursor-pointer";
-                div.onclick = () => showTab('tasks');
-                div.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-1.5 h-1.5 rounded-full ${task.completed ? 'bg-green-500' : 'bg-amber-400'}"></div>
-                        <span class="text-sm font-medium ${task.completed ? 'text-slate-300 line-through' : 'text-slate-600'}">${task.text}</span>
-                    </div>
-                    <span class="text-[9px] font-black ${task.completed ? 'text-green-500' : 'text-slate-300'} uppercase group-hover:text-indigo-500 transition-colors">${task.completed ? '성공' : '연구중'}</span>
-                `;
+            const recent = [...tasks].sort((a,b)=>b.createdAt - a.createdAt).slice(0,3);
+            container.innerHTML = recent.length ? '' : '<div class="py-4 text-center text-slate-300 text-xs italic">최근 과제 없음</div>';
+            recent.forEach(t => {
+                const div = document.createElement('div'); div.className = "flex items-center justify-between py-2";
+                div.innerHTML = `<div class="flex items-center gap-2"><div class="w-1.5 h-1.5 rounded-full ${t.completed ? 'bg-green-500' : 'bg-amber-400'}"></div><span class="text-xs font-medium ${t.completed ? 'text-slate-300 line-through' : 'text-slate-600'}">${t.text}</span></div>`;
                 container.appendChild(div);
             });
         }
 
         function updateStats() {
-            const total = tasks.length;
-            const completed = tasks.filter(t => t.completed).length;
-            const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
-            
-            document.getElementById('stat-total').innerText = total;
+            const progress = bids.length ? Math.round((bids.filter(b=>b.status==='낙찰').length / bids.length) * 100) : 0;
+            document.getElementById('stat-total').innerText = tasks.length;
+            document.getElementById('stat-bids').innerText = bids.length;
             document.getElementById('stat-progress').innerText = progress + '%';
-            document.getElementById('stat-progress-bar').style.width = progress + '%';
             document.getElementById('stat-files').innerText = files.length;
         }
 
         function showToast(msg) {
-            const toast = document.getElementById('toast');
-            const toastMsg = document.getElementById('toast-msg');
-            if (toast && toastMsg) {
-                toastMsg.innerText = msg;
-                toast.style.opacity = '1';
-                toast.style.transform = 'translateY(0)';
-                setTimeout(() => {
-                    toast.style.opacity = '0';
-                    toast.style.transform = 'translateY(16px)';
-                }, 3000);
-            }
+            const t = document.getElementById('toast'), tm = document.getElementById('toast-msg');
+            tm.innerText = msg; t.style.opacity = '1'; t.style.transform = 'translateY(0) translateX(-50%)';
+            setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(16px) translateX(-50%)'; }, 3000);
         }
 
-        function updateClock() {
-            const now = new Date();
-            const clockEl = document.getElementById('digital-clock');
-            if (clockEl) clockEl.innerText = now.toLocaleString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' });
-        }
-        setInterval(updateClock, 1000);
-        updateClock();
+        function updateClock() { document.getElementById('digital-clock').innerText = new Date().toLocaleString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' }); }
+        setInterval(updateClock, 1000); updateClock();
 
-        document.getElementById('taskInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') addTask(); });
-
-        // 초기 실행
-        renderAll();
-        renderFileList();
+        renderAll(); renderFileList();
     </script>
 </body>
 </html>

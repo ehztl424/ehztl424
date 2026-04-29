@@ -48,7 +48,10 @@
     // =====================================================================
     // 👇👇 [여기에 발급받은 키를 입력하세요] 👇👇
     // =====================================================================
-    const GOOGLE_CLIENT_ID = "여기에_클라이언트_ID를_붙여넣으세요"; 
+    // 클라이언트 ID는 올바르게 입력되었습니다!
+    const GOOGLE_CLIENT_ID = "616527196791-gnisfc0coimun5gv2i2uukh7mn1ll22o.apps.googleusercontent.com"; 
+    
+    // 이제 아래의 API 키만 발급받아서 붙여넣으시면 됩니다.
     const GOOGLE_API_KEY = "여기에_API_키를_붙여넣으세요";
     // =====================================================================
 
@@ -59,7 +62,7 @@
     function App() {
       const [activeTab, setActiveTab] = useState('checklist');
       const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-      616527196791-gnisfc0coimun5gv2i2uukh7mn1ll22o.apps.googleusercontent.com
+      
       // --- Google Drive 연동 상태 ---
       const [gapiLoaded, setGapiLoaded] = useState(false);
       const [isDriveConnected, setIsDriveConnected] = useState(false);
@@ -90,7 +93,7 @@
             // GAPI 초기화
             window.gapi.load('client', async () => {
               try {
-                if(GOOGLE_API_KEY && GOOGLE_API_KEY !== "여기에_API_키를_붙여넣으세요"){
+                if(GOOGLE_API_KEY && GOOGLE_API_KEY !== "AIzaSyAu23MZcKujYMpQsUjQWTaDO2SosDDq4mM"){
                   await window.gapi.client.init({
                     apiKey: GOOGLE_API_KEY,
                     discoveryDocs: [DISCOVERY_DOC],

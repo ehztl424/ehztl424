@@ -125,18 +125,33 @@
         const [weekTitle, setWeekTitle] = useState("");
         const inputRefs = useRef({});
 
-        // 임시 데이터 (DB가 연결 안 된 깃허브 환경용)
-        const [localWeeks, setLocalWeeks] = useState([
-          { id: 'temp-1', title: '이번 주 진행사항', createdAt: Date.now() }
-        ]);
-        const [localBlocks, setLocalBlocks] = useState({
-          'temp-1': [
-            { id: crypto.randomUUID(), type: 'h1', text: 'GitHub 연동 테스트', completed: false },
-            { id: crypto.randomUUID(), type: 'todo', text: 'index.html 파일에 코드 붙여넣기', completed: true },
-            { id: crypto.randomUUID(), type: 'todo', text: '다음 기능(영업관리 등) 구상하기', completed: false },
-            { id: crypto.randomUUID(), type: 'text', text: '단축키 "[] " 를 입력하면 체크박스가 생성됩니다.', completed: false }
-          ]
-        });
+        // --- 브라우저 저장소(localStorage) 연동 로직 추가 ---
+        const getInitialWeeks = () => {
+          const stored = localStorage.getItem('workspace_weeks');
+          return stored ? JSON.parse(stored) : [{ id: 'temp-1', title: '이번 주 진행사항', createdAt: Date.now() }];
+        };
+        const getInitialBlocks = () => {
+          const stored = localStorage.getItem('workspace_blocks');
+          return stored ? JSON.parse(stored) : {
+            'temp-1': [
+              { id: crypto.randomUUID(), type: 'h1', text: '브라우저 저장소 연동 완료!', completed: false },
+              { id: crypto.randomUUID(), type: 'todo', text: '이제 브라우저에 내용이 자동 저장됩니다.', completed: true },
+              { id: crypto.randomUUID(), type: 'todo', text: '새로고침을 해도 데이터가 날아가지 않아요.', completed: false },
+              { id: crypto.randomUUID(), type: 'text', text: '단축키 "[] " 를 입력하면 체크박스가 생성됩니다.', completed: false }
+            ]
+          };
+        };
+
+        const [localWeeks, setLocalWeeks] = useState(getInitialWeeks);
+        const [localBlocks, setLocalBlocks] = useState(getInitialBlocks);
+
+        // 변경사항이 생길 때마다 브라우저 저장소(localStorage)에 저장
+        useEffect(() => {
+          if (!db) {
+            localStorage.setItem('workspace_weeks', JSON.stringify(localWeeks));
+            localStorage.setItem('workspace_blocks', JSON.stringify(localBlocks));
+          }
+        }, [localWeeks, localBlocks, db]);
 
         // 데이터 로드
         useEffect(() => {
@@ -150,7 +165,6 @@
             });
             return () => unsubscribe();
           } else {
-            // DB 없을 때 로컬 임시 데이터 사용
             setWeeks(localWeeks);
             if (!activeWeekId && localWeeks.length > 0) setActiveWeekId(localWeeks[0].id);
           }
@@ -174,7 +188,8 @@
             setWeekTitle(currentWeek?.title || "제목 없음");
             setBlocks(localBlocks[activeWeekId] || [{ id: crypto.randomUUID(), type: 'text', text: '', completed: false }]);
           }
-        }, [db, user, activeWeekId, localWeeks, localBlocks]);
+          // 주의: 타이핑 중 포커스 유실 방지를 위해 localBlocks 제외
+        }, [db, user, activeWeekId]);
 
         // 데이터 저장
         const saveBlocksToFirebase = useCallback(async (newBlocks, newTitle = weekTitle) => {

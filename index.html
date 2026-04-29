@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>태준실험실 - Lab OS v4.6 (기능 복구 및 클라우드 최적화)</title>
+    <title>태준실험실 - Lab OS v4.7 (클라우드 버튼 완벽 복구)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -50,7 +50,6 @@
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/20 hidden z-40"></div>
 
     <div class="flex h-screen overflow-hidden relative">
-        <!-- 사이드바 -->
         <aside id="sidebar" class="w-72 bg-[#fbfbfa] border-r border-[#edece9] flex flex-col shrink-0">
             <div class="p-6 flex justify-between items-center">
                 <h1 class="text-lg font-bold text-slate-800 flex items-center gap-2 cursor-pointer" onclick="showTab('dashboard');">
@@ -90,7 +89,6 @@
             </div>
         </aside>
 
-        <!-- 메인 콘텐츠 -->
         <main id="main-content" class="flex-1 overflow-y-auto bg-white w-full">
             <header class="bg-white/90 backdrop-blur-sm border-b border-[#edece9] sticky top-0 z-30 px-4 md:px-8 py-4 flex justify-between items-center">
                 <div class="flex items-center gap-3">
@@ -110,7 +108,6 @@
             </header>
 
             <div class="p-4 md:p-8 lg:p-10 max-w-full mx-auto">
-                <!-- [1] 대시보드 -->
                 <section id="tab-dashboard" class="space-y-8 animate-in fade-in">
                     <h1 class="text-3xl font-bold text-slate-900 tracking-tight">종합 현황</h1>
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -125,7 +122,6 @@
                     </div>
                 </section>
 
-                <!-- [2] 할 일 관리 -->
                 <section id="tab-tasks" class="hidden space-y-6 animate-in slide-in-from-right-4">
                     <h1 class="text-3xl font-bold text-slate-900 tracking-tight">오늘의 할 일</h1>
                     <div class="flex gap-2 pb-4 border-b border-slate-100">
@@ -135,7 +131,6 @@
                     <div id="taskList" class="space-y-1"></div>
                 </section>
 
-                <!-- [3] 입찰 참여 시트 -->
                 <section id="tab-bidding" class="hidden space-y-6 animate-in slide-in-from-right-4">
                     <div class="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
                         <div>
@@ -153,7 +148,7 @@
                     <div id="ai-insight-panel" class="hidden glass-card p-6 rounded-3xl border-2 border-indigo-100 bg-indigo-50/20 space-y-4">
                         <div class="flex items-center justify-between border-b border-indigo-100 pb-3">
                             <h4 class="text-sm font-black text-indigo-700 flex items-center gap-2">✨ AI 연구원 리포트</h4>
-                            <button onclick="document.getElementById('ai-insight-panel').classList.add('hidden')" class="text-slate-400 text-xs font-bold hover:text-slate-900">닫기</button>
+                            <button onclick="document.getElementById('ai-insight-panel').classList.add('hidden')" class="text-slate-400 text-xs font-bold hover:text-slate-900 transition-colors">닫기</button>
                         </div>
                         <div id="ai-content" class="text-xs leading-relaxed text-slate-700 whitespace-pre-wrap"></div>
                     </div>
@@ -183,7 +178,6 @@
                     </div>
                 </section>
 
-                <!-- [4] 자료 저장소 -->
                 <section id="tab-resources" class="hidden space-y-8 animate-in slide-in-from-right-4">
                     <h1 class="text-3xl font-bold text-slate-900 tracking-tight">자료 저장소</h1>
                     
@@ -200,7 +194,6 @@
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- 직접 업로드 (드래그 앤 드랍 지원) -->
                         <div id="drop-zone" class="border-2 border-dashed border-slate-200 rounded-3xl p-10 text-center flex flex-col items-center justify-center gap-4 bg-slate-50/30 transition-all">
                             <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm text-slate-300 mb-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -209,18 +202,13 @@
                             <input type="file" id="fileInput" class="hidden" accept="application/pdf">
                             <button onclick="document.getElementById('fileInput').click()" class="bg-white px-5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-indigo-600 hover:shadow-sm">또는 파일 선택</button>
                         </div>
-                        
-                        <!-- 파일 리스트 -->
-                        <div id="file-list" class="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                            <!-- 파일 및 링크 목록 -->
-                        </div>
+                        <div id="file-list" class="space-y-3 max-h-[400px] overflow-y-auto pr-2"></div>
                     </div>
                 </section>
             </div>
         </main>
     </div>
 
-    <!-- 엑셀 데이터 붙여넣기 모달 -->
     <div id="pasteModal" class="hidden fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
         <div class="bg-white w-full max-w-3xl rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
             <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -237,12 +225,11 @@
         </div>
     </div>
 
-    <!-- 미리보기 모달 -->
     <div id="previewModal" class="hidden fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
         <div class="bg-white w-full max-w-6xl h-[90vh] rounded-3xl overflow-hidden shadow-2xl relative flex flex-col">
             <div class="p-5 border-b flex justify-between items-center bg-white">
                 <h3 id="previewTitle" class="font-bold text-slate-800 truncate pr-10">파일 미리보기</h3>
-                <button onclick="closePreview()" class="px-6 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl">닫기</button>
+                <button onclick="closePreview()" class="px-6 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl transition-all hover:bg-slate-800">닫기</button>
             </div>
             <iframe id="pdfFrame" class="w-full h-full border-none"></iframe>
         </div>
@@ -255,12 +242,11 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- Firebase 초기화 ---
         const firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'taejun-lab-v46-cloud';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'taejun-lab-v47-cloud';
         const apiKey = ""; 
 
         let user = null;
@@ -269,7 +255,7 @@
         let files = [];
         let activeFilters = {};
 
-        // --- 공통 유틸리티 (Global 바인딩 필수) ---
+        // --- GLOBAL FUNCTION BINDING (CRITICAL FOR ONCLICK) ---
         window.toggleSidebar = function() {
             document.getElementById('sidebar').classList.toggle('open');
             document.getElementById('sidebar-overlay').classList.toggle('hidden');
@@ -297,7 +283,7 @@
             setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(20px) translateX(-50%)'; }, 3000);
         };
 
-        // --- 데이터 동기화 시스템 ---
+        // --- Auth & Sync ---
         const initAuth = async () => {
             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                 await signInWithCustomToken(auth, __initial_auth_token);
@@ -333,7 +319,44 @@
             });
         }
 
-        // --- 입찰 시트 기능 ---
+        // --- Tasks Logic ---
+        window.addTask = async function() {
+            if (!user) return;
+            const input = document.getElementById('taskInput');
+            if (!input.value.trim()) return;
+            const id = Date.now().toString();
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id), {
+                text: input.value, completed: false, createdAt: Date.now()
+            });
+            input.value = '';
+        };
+
+        window.toggleTask = async function(id) {
+            const t = tasks.find(x => x.id === id);
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id), { completed: !t.completed });
+        };
+
+        window.removeTask = async function(id) {
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id));
+        };
+
+        function renderTasks() {
+            const container = document.getElementById('taskList');
+            container.innerHTML = '';
+            tasks.sort((a,b) => b.createdAt - a.createdAt).forEach(t => {
+                const div = document.createElement('div');
+                div.className = `notion-item group hover:bg-slate-50 transition-colors rounded-xl px-2`;
+                div.innerHTML = `
+                    <input type="checkbox" class="notion-checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask('${t.id}')">
+                    <div class="notion-text ${t.completed ? 'completed' : ''}">${t.text}</div>
+                    <button onclick="removeTask('${t.id}')" class="opacity-0 group-hover:opacity-100 text-red-400 p-2 text-[10px] font-bold transition-all">삭제</button>
+                `;
+                container.appendChild(div);
+            });
+            renderDashboard();
+        }
+
+        // --- Bidding Logic ---
         window.addBidRow = async function() {
             if (!user) return;
             const id = Date.now().toString();
@@ -394,13 +417,13 @@
                     <td><input value="${bid.ptStatus || ''}" onblur="saveBidCell('${bid.id}', 'ptStatus', this.value)"></td>
                     <td><input value="${bid.ptTime || ''}" onblur="saveBidCell('${bid.id}', 'ptTime', this.value)"></td>
                     <td><input value="${bid.winner || ''}" onblur="saveBidCell('${bid.id}', 'winner', this.value)"></td>
-                    <td class="text-center"><button onclick="removeBidRow('${bid.id}')" class="text-red-500 font-bold px-2 py-1 rounded hover:bg-red-50">×</button></td>
+                    <td class="text-center"><button onclick="removeBidRow('${bid.id}')" class="text-red-500 font-bold px-2 py-1 rounded transition-all hover:bg-red-50">×</button></td>
                 `;
                 body.appendChild(tr);
             });
         }
 
-        // --- 엑셀 붙여넣기 ---
+        // --- Excel Import ---
         window.openPasteModal = () => document.getElementById('pasteModal').classList.remove('hidden');
         window.closePasteModal = () => document.getElementById('pasteModal').classList.add('hidden');
 
@@ -437,43 +460,10 @@
                 count++;
             }
             closePasteModal();
-            showToast(`${count}건의 데이터가 성공적으로 파싱되었습니다.`);
+            window.showToast(`${count}건의 데이터가 업로드되었습니다.`);
         };
 
-        // --- 할 일 기능 ---
-        window.addTask = async function() {
-            if (!user) return;
-            const input = document.getElementById('taskInput');
-            if (!input.value.trim()) return;
-            const id = Date.now().toString();
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id), {
-                text: input.value, completed: false, createdAt: Date.now()
-            });
-            input.value = '';
-        };
-
-        window.toggleTask = async function(id) {
-            const t = tasks.find(x => x.id === id);
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id), { completed: !t.completed });
-        };
-
-        window.removeTask = async function(id) {
-            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id));
-        };
-
-        function renderTasks() {
-            const container = document.getElementById('taskList');
-            container.innerHTML = '';
-            tasks.sort((a,b) => b.createdAt - a.createdAt).forEach(t => {
-                const div = document.createElement('div');
-                div.className = `notion-item group hover:bg-slate-50 transition-colors rounded-xl px-2`;
-                div.innerHTML = `<input type="checkbox" class="notion-checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask('${t.id}')"><div class="notion-text ${t.completed ? 'completed' : ''}">${t.text}</div><button onclick="removeTask('${t.id}')" class="opacity-0 group-hover:opacity-100 text-red-400 p-2 text-[10px] font-bold">삭제</button>`;
-                container.appendChild(div);
-            });
-            renderDashboard();
-        }
-
-        // --- 자료 저장소 (드래그 앤 드랍 및 링크) ---
+        // --- Resources (Files & Drive) ---
         window.addDriveLink = async function() {
             const input = document.getElementById('driveLinkInput');
             if (!input.value.trim() || !user) return;
@@ -482,16 +472,16 @@
                 name: '구글 드라이브 파일', link: input.value, type: 'link', createdAt: Date.now()
             });
             input.value = '';
-            showToast('드라이브 링크 등록 완료');
+            window.showToast('드라이브 링크 등록 완료');
         };
 
         const handleFileUpload = async (file) => {
             if (!file || file.type !== 'application/pdf') {
-                showToast('PDF 파일만 업로드 가능합니다.');
+                window.showToast('PDF 파일만 지원합니다.');
                 return;
             }
             if (file.size > 800 * 1024) {
-                showToast('클라우드 공유용량(800KB) 초과. 드라이브 링크를 권장합니다.');
+                window.showToast('800KB 이하의 파일만 클라우드에 직접 올릴 수 있습니다.');
                 return;
             }
             const reader = new FileReader();
@@ -500,7 +490,7 @@
                 await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'files', id), {
                     name: file.name, data: e.target.result, type: 'pdf', createdAt: Date.now()
                 });
-                showToast('파일 업로드 완료');
+                window.showToast('파일 클라우드 업로드 완료');
             };
             reader.readAsDataURL(file);
         };
@@ -508,21 +498,23 @@
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('fileInput');
 
-        fileInput.onchange = (e) => handleFileUpload(e.target.files[0]);
-        
-        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('drop-active'); };
-        dropZone.ondragleave = () => dropZone.classList.remove('drop-active');
-        dropZone.ondrop = (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('drop-active');
-            handleFileUpload(e.dataTransfer.files[0]);
-        };
+        if (fileInput) fileInput.onchange = (e) => handleFileUpload(e.target.files[0]);
+        if (dropZone) {
+            dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('drop-active'); };
+            dropZone.ondragleave = () => dropZone.classList.remove('drop-active');
+            dropZone.ondrop = (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drop-active');
+                handleFileUpload(e.dataTransfer.files[0]);
+            };
+        }
 
         window.removeFile = async (id) => { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'files', id)); };
 
         function renderFileList() {
             const container = document.getElementById('file-list');
-            container.innerHTML = files.length ? '' : '<div class="p-8 text-center text-slate-300 text-xs italic">자료 없음</div>';
+            if (!container) return;
+            container.innerHTML = files.length ? '' : '<div class="p-8 text-center text-slate-300 text-xs italic">업로드된 자료가 없습니다.</div>';
             files.sort((a,b) => b.createdAt - a.createdAt).forEach(f => {
                 const isLink = f.type === 'link';
                 const card = document.createElement('div');
@@ -534,7 +526,7 @@
                         </div>
                         <div class="overflow-hidden">
                             <p class="font-bold text-xs truncate text-slate-700">${f.name}</p>
-                            <p class="text-[9px] text-slate-400 uppercase font-black tracking-widest">${isLink ? 'Drive' : 'Cloud'}</p>
+                            <p class="text-[9px] text-slate-400 uppercase font-black tracking-widest">${isLink ? 'Google Drive' : 'Cloud DB'}</p>
                         </div>
                     </div>
                     <div class="flex gap-2">
@@ -554,62 +546,75 @@
         };
         window.closePreview = () => document.getElementById('previewModal').classList.add('hidden');
 
-        // --- AI 분석 ---
+        // --- AI Analysis ---
         window.analyzeBidsWithAI = async function() {
             const filtered = getFilteredBids();
-            if (filtered.length === 0) { showToast("분석할 데이터가 없습니다."); return; }
+            if (filtered.length === 0) { window.showToast("분석할 입찰 데이터가 없습니다."); return; }
             const btn = document.getElementById('ai-btn');
             const content = document.getElementById('ai-content');
             btn.disabled = true;
             document.getElementById('ai-insight-panel').classList.remove('hidden');
-            content.innerText = "태준 연구원을 위해 데이터를 정밀 스크리닝 중입니다...";
+            content.innerText = "연구원이 전체 데이터를 클라우드에서 수집하여 분석 리포트를 작성 중입니다...";
 
             const summary = filtered.map(b => `- ${b.title}: ${b.bidAmount} 투찰 (${b.status})`).join('\n');
-            const systemPrompt = `당신은 태준실험실의 AI 연구원입니다. 다음 입찰 데이터를 분석하여 전문적인 리포트를 작성하세요. 비판적이고 날카로운 시선으로 예산 타당성과 성공 전략을 제안하세요.`;
+            const systemPrompt = `당신은 '태준실험실'의 AI 전임 연구원입니다. 입찰 참여 데이터를 기반으로 예산 타당성, PT 전략, 낙찰 확률 증대 방안을 아주 전문적인 어조로 분석하여 제언하세요.`;
 
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: `데이터:\n${summary}` }] }],
+                        contents: [{ parts: [{ text: `데이터 정보:\n${summary}` }] }],
                         systemInstruction: { parts: [{ text: systemPrompt }] }
                     })
                 });
                 const result = await response.json();
-                content.innerText = result.candidates?.[0]?.content?.parts?.[0]?.text || "분석 리포트 생성에 실패했습니다.";
-            } catch (err) { content.innerText = "서버 연결에 실패했습니다."; }
+                content.innerText = result.candidates?.[0]?.content?.parts?.[0]?.text || "리포트 생성 실패";
+            } catch (err) { content.innerText = "분석 서버 연결에 실패했습니다."; }
             finally { btn.disabled = false; }
         };
 
-        // --- 대시보드 및 통계 ---
+        // --- Stats & Dashboard ---
         function renderDashboard() {
             const container = document.getElementById('dashboard-task-list');
+            if (!container) return;
             const recent = [...tasks].sort((a,b)=>b.createdAt - a.createdAt).slice(0,3);
             container.innerHTML = recent.length ? '' : '<div class="py-10 text-center text-slate-300 text-xs col-span-3 italic">할 일 목록이 비어 있습니다.</div>';
             recent.forEach(t => {
                 const div = document.createElement('div');
                 div.className = "flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm";
-                div.innerHTML = `<div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full ${t.completed ? 'bg-green-500' : 'bg-amber-400'}"></div><span class="text-xs font-semibold ${t.completed ? 'text-slate-300 line-through' : 'text-slate-700'}">${t.text}</span></div><span class="text-[9px] font-black text-slate-300 uppercase">${t.completed ? 'Done' : 'Active'}</span>`;
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-2 h-2 rounded-full ${t.completed ? 'bg-green-500' : 'bg-amber-400'}"></div>
+                        <span class="text-xs font-semibold ${t.completed ? 'text-slate-300 line-through' : 'text-slate-700'}">${t.text}</span>
+                    </div>
+                    <span class="text-[9px] font-black text-slate-300 uppercase">${t.completed ? 'Done' : 'Active'}</span>
+                `;
                 container.appendChild(div);
             });
         }
 
         function updateStats() {
             const progress = bids.length ? Math.round((bids.filter(b=>b.status==='낙찰').length / bids.length) * 100) : 0;
-            document.getElementById('stat-total').innerText = tasks.length;
-            document.getElementById('stat-bids').innerText = bids.length;
-            document.getElementById('stat-progress').innerText = progress + '%';
-            document.getElementById('stat-files').innerText = files.length;
+            const t = document.getElementById('stat-total');
+            const b = document.getElementById('stat-bids');
+            const p = document.getElementById('stat-progress');
+            const f = document.getElementById('stat-files');
+            if (t) t.innerText = tasks.length;
+            if (b) b.innerText = bids.length;
+            if (p) p.innerText = progress + '%';
+            if (f) f.innerText = files.length;
         }
 
         function updateClock() { 
             const now = new Date();
-            document.getElementById('digital-clock').innerText = now.toLocaleString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' }); 
+            const clock = document.getElementById('digital-clock');
+            if (clock) clock.innerText = now.toLocaleString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' }); 
         }
         setInterval(updateClock, 1000); updateClock();
 
-        document.getElementById('taskInput').onkeydown = (e) => { if(e.key === 'Enter') addTask(); };
+        const taskInput = document.getElementById('taskInput');
+        if (taskInput) taskInput.onkeydown = (e) => { if(e.key === 'Enter') window.addTask(); };
     </script>
 </body>
 </html>

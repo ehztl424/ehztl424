@@ -46,13 +46,10 @@
     } from 'lucide-react';
 
     // =====================================================================
-    // 👇👇 [여기에 발급받은 키를 입력하세요] 👇👇
+    // 수정 완료! 두 개의 키가 올바른 위치에 세팅되었습니다.
     // =====================================================================
-    // 클라이언트 ID는 올바르게 입력되었습니다!
     const GOOGLE_CLIENT_ID = "616527196791-gnisfc0coimun5gv2i2uukh7mn1ll22o.apps.googleusercontent.com"; 
-    
-    // 이제 아래의 API 키만 발급받아서 붙여넣으시면 됩니다.
-    const GOOGLE_API_KEY = "여기에_API_키를_붙여넣으세요";
+    const GOOGLE_API_KEY = "AIzaSyAu23MZcKujYMpQsUjQWTaDO2SosDDq4mM";
     // =====================================================================
 
     const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
@@ -93,7 +90,7 @@
             // GAPI 초기화
             window.gapi.load('client', async () => {
               try {
-                if(GOOGLE_API_KEY && GOOGLE_API_KEY !== "AIzaSyAu23MZcKujYMpQsUjQWTaDO2SosDDq4mM"){
+                if(GOOGLE_API_KEY) {
                   await window.gapi.client.init({
                     apiKey: GOOGLE_API_KEY,
                     discoveryDocs: [DISCOVERY_DOC],
@@ -103,7 +100,7 @@
               } catch (e) { console.error("GAPI 초기화 에러:", e); }
             });
             // GIS (토큰 클라이언트) 초기화
-            if(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== "여기에_클라이언트_ID를_붙여넣으세요"){
+            if(GOOGLE_CLIENT_ID) {
               tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
                 client_id: GOOGLE_CLIENT_ID,
                 scope: SCOPES,
@@ -137,7 +134,7 @@
 
       const handleDriveConnectClick = () => {
         if (!gapiLoaded || !tokenClientRef.current) {
-          alert("구글 API 키와 클라이언트 ID를 코드에 입력하셨는지 확인해주세요!");
+          alert("구글 API가 아직 로딩 중이거나 설정에 문제가 있습니다. 잠시 후 다시 시도해주세요.");
           return;
         }
         if (window.gapi.client.getToken() === null) {

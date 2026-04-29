@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>태준실험실 - Lab OS v4.7 (클라우드 버튼 완벽 복구)</title>
+    <title>태준실험실 - Lab OS v4.8 (Stable Sync)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -40,59 +40,58 @@
         .glass-card { background: #fbfbfa; border: 1px solid #edece9; }
         .modal-overlay { background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(8px); }
         .drop-active { border-color: #4f46e5 !important; background-color: #eef2ff !important; }
-
-        .ai-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
     </style>
 </head>
 <body class="overflow-hidden">
 
-    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/20 hidden z-40"></div>
+    <div id="sidebar-overlay" onclick="window.toggleSidebar()" class="fixed inset-0 bg-black/20 hidden z-40"></div>
 
     <div class="flex h-screen overflow-hidden relative">
+        <!-- Sidebar -->
         <aside id="sidebar" class="w-72 bg-[#fbfbfa] border-r border-[#edece9] flex flex-col shrink-0">
             <div class="p-6 flex justify-between items-center">
-                <h1 class="text-lg font-bold text-slate-800 flex items-center gap-2 cursor-pointer" onclick="showTab('dashboard');">
+                <h1 class="text-lg font-bold text-slate-800 flex items-center gap-2 cursor-pointer" onclick="window.showTab('dashboard');">
                     <span class="text-2xl">🧪</span>
                     태준실험실
                 </h1>
-                <button class="md:hidden text-slate-400" onclick="toggleSidebar()">
+                <button class="md:hidden text-slate-400" onclick="window.toggleSidebar()">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
             <nav class="flex-1 px-4 space-y-1">
-                <div onclick="showTab('dashboard');" id="nav-dashboard" class="sidebar-item active flex items-center gap-3 p-3 rounded-md text-sm">
+                <div onclick="window.showTab('dashboard');" id="nav-dashboard" class="sidebar-item active flex items-center gap-3 p-3 rounded-md text-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                     종합 현황
                 </div>
-                <div onclick="showTab('tasks');" id="nav-tasks" class="sidebar-item flex items-center gap-3 p-3 rounded-md text-sm">
+                <div onclick="window.showTab('tasks');" id="nav-tasks" class="sidebar-item flex items-center gap-3 p-3 rounded-md text-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                     할 일 관리
                 </div>
-                <div onclick="showTab('bidding');" id="nav-bidding" class="sidebar-item flex items-center gap-3 p-3 rounded-md text-sm">
+                <div onclick="window.showTab('bidding');" id="nav-bidding" class="sidebar-item flex items-center gap-3 p-3 rounded-md text-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>
                     입찰 참여 시트
                 </div>
-                <div onclick="showTab('resources');" id="nav-resources" class="sidebar-item flex items-center gap-3 p-3 rounded-md text-sm">
+                <div onclick="window.showTab('resources');" id="nav-resources" class="sidebar-item flex items-center gap-3 p-3 rounded-md text-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                     자료 저장소
                 </div>
             </nav>
             <div class="p-6 border-t border-[#edece9]">
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center text-white font-bold text-xs italic">CL</div>
+                    <div class="w-8 h-8 rounded bg-indigo-600 flex items-center justify-center text-white font-bold text-xs italic">TJ</div>
                     <div class="text-xs">
-                        <p class="font-bold text-slate-800 text-[11px]">클라우드 멀티싱크</p>
-                        <p id="sync-indicator" class="text-[9px] text-emerald-500 font-bold uppercase tracking-tighter animate-pulse">동기화 활성화</p>
+                        <p class="font-bold text-slate-800 text-[11px]">Lab OS Stable</p>
+                        <p id="sync-indicator" class="text-[9px] text-emerald-500 font-bold uppercase tracking-tighter">Ready</p>
                     </div>
                 </div>
             </div>
         </aside>
 
+        <!-- Main Content -->
         <main id="main-content" class="flex-1 overflow-y-auto bg-white w-full">
             <header class="bg-white/90 backdrop-blur-sm border-b border-[#edece9] sticky top-0 z-30 px-4 md:px-8 py-4 flex justify-between items-center">
                 <div class="flex items-center gap-3">
-                    <button class="md:hidden p-1 text-slate-600" onclick="toggleSidebar()">
+                    <button class="md:hidden p-1 text-slate-600" onclick="window.toggleSidebar()">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
                     </button>
                     <div>
@@ -100,14 +99,13 @@
                         <p id="digital-clock" class="text-[10px] text-slate-400"></p>
                     </div>
                 </div>
-                <div class="flex items-center gap-2">
-                    <div id="connection-badge" class="hidden sm:flex text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full border border-emerald-100 items-center gap-1.5 shadow-sm">
-                        <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span> Cloud Syncing
-                    </div>
+                <div id="connection-badge" class="hidden sm:flex text-[9px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full border border-emerald-100 items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span> Live Sync
                 </div>
             </header>
 
             <div class="p-4 md:p-8 lg:p-10 max-w-full mx-auto">
+                <!-- Dashboard Section -->
                 <section id="tab-dashboard" class="space-y-8 animate-in fade-in">
                     <h1 class="text-3xl font-bold text-slate-900 tracking-tight">종합 현황</h1>
                     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -116,39 +114,38 @@
                         <div class="glass-card p-5 rounded-2xl shadow-sm text-green-600"><p class="text-[10px] font-bold text-slate-400 uppercase mb-2 text-slate-400">성공률</p><h3 id="stat-progress" class="text-3xl font-bold">0%</h3></div>
                         <div class="glass-card p-5 rounded-2xl shadow-sm"><p class="text-[10px] font-bold text-slate-400 uppercase mb-2">저장 파일</p><h3 id="stat-files" class="text-3xl font-bold">0</h3></div>
                     </div>
-                    <div class="space-y-4">
-                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest">최근 업무 브리핑</h4>
-                        <div id="dashboard-task-list" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
-                    </div>
+                    <div id="dashboard-task-list" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
                 </section>
 
+                <!-- Tasks Section -->
                 <section id="tab-tasks" class="hidden space-y-6 animate-in slide-in-from-right-4">
-                    <h1 class="text-3xl font-bold text-slate-900 tracking-tight">오늘의 할 일</h1>
+                    <h1 class="text-3xl font-bold text-slate-900 tracking-tight text-center sm:text-left">오늘의 할 일</h1>
                     <div class="flex gap-2 pb-4 border-b border-slate-100">
-                        <input type="text" id="taskInput" placeholder="새로운 할 일을 입력하세요..." class="flex-1 px-4 py-3 border-none bg-slate-50 rounded-2xl focus:ring-2 focus:ring-indigo-500 text-lg font-medium">
-                        <button onclick="addTask()" class="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">추가</button>
+                        <input type="text" id="taskInput" placeholder="무엇을 해볼까요? (Enter)" class="flex-1 px-4 py-3 border-none bg-slate-50 rounded-2xl focus:ring-2 focus:ring-indigo-500 text-lg font-medium">
+                        <button onclick="window.addTask()" class="bg-indigo-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100">추가</button>
                     </div>
                     <div id="taskList" class="space-y-1"></div>
                 </section>
 
+                <!-- Bidding Section -->
                 <section id="tab-bidding" class="hidden space-y-6 animate-in slide-in-from-right-4">
                     <div class="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
                         <div>
                             <h1 class="text-3xl font-bold text-slate-900 tracking-tight">입찰 참여 시트</h1>
-                            <p class="text-slate-500 text-xs mt-1 italic">실시간 클라우드 동기화 모드입니다. 수정 시 자동으로 반영됩니다.</p>
+                            <p class="text-slate-500 text-xs mt-1 italic">수정 즉시 다른 기기에 동기화됩니다.</p>
                         </div>
                         <div class="flex flex-wrap gap-2">
-                            <button onclick="openPasteModal()" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2.5 rounded-xl text-xs font-black hover:bg-emerald-100">📋 엑셀 붙여넣기</button>
-                            <button onclick="analyzeBidsWithAI()" id="ai-btn" class="bg-indigo-50 text-indigo-600 border border-indigo-200 px-4 py-2.5 rounded-xl text-xs font-black hover:bg-indigo-100">✨ AI 분석</button>
-                            <button onclick="addBidRow()" class="bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-700">+ 행 추가</button>
-                            <button onclick="clearAllBids()" class="bg-red-50 text-red-600 border border-red-200 px-4 py-2.5 rounded-xl text-xs font-bold">🗑 전체 삭제</button>
+                            <button onclick="window.openPasteModal()" class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2.5 rounded-xl text-xs font-black hover:bg-emerald-100 transition-colors">📋 엑셀 붙여넣기</button>
+                            <button onclick="window.analyzeBidsWithAI()" id="ai-btn" class="bg-indigo-50 text-indigo-600 border border-indigo-200 px-4 py-2.5 rounded-xl text-xs font-black hover:bg-indigo-100 transition-colors">✨ AI 리포트</button>
+                            <button onclick="window.addBidRow()" class="bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-700">+ 행 추가</button>
+                            <button onclick="window.clearAllBids()" class="bg-red-50 text-red-600 border border-red-200 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-red-100">🗑 전체 삭제</button>
                         </div>
                     </div>
 
                     <div id="ai-insight-panel" class="hidden glass-card p-6 rounded-3xl border-2 border-indigo-100 bg-indigo-50/20 space-y-4">
                         <div class="flex items-center justify-between border-b border-indigo-100 pb-3">
-                            <h4 class="text-sm font-black text-indigo-700 flex items-center gap-2">✨ AI 연구원 리포트</h4>
-                            <button onclick="document.getElementById('ai-insight-panel').classList.add('hidden')" class="text-slate-400 text-xs font-bold hover:text-slate-900 transition-colors">닫기</button>
+                            <h4 class="text-sm font-black text-indigo-700">✨ AI 연구원 리포트</h4>
+                            <button onclick="document.getElementById('ai-insight-panel').classList.add('hidden')" class="text-slate-400 text-xs font-bold">닫기</button>
                         </div>
                         <div id="ai-content" class="text-xs leading-relaxed text-slate-700 whitespace-pre-wrap"></div>
                     </div>
@@ -157,12 +154,12 @@
                         <table class="sheet-table">
                             <thead>
                                 <tr id="filter-row">
-                                    <th width="100">진행상태<input type="text" class="filter-input" oninput="applyFilters('status', this.value)" placeholder="필터..."></th>
-                                    <th width="90">분야<input type="text" class="filter-input" oninput="applyFilters('category', this.value)" placeholder="필터..."></th>
-                                    <th width="160">발주처<input type="text" class="filter-input" oninput="applyFilters('client', this.value)" placeholder="필터..."></th>
-                                    <th width="320">공고명<input type="text" class="filter-input" oninput="applyFilters('title', this.value)" placeholder="필터..."></th>
-                                    <th width="130">예산<input type="text" class="filter-input" oninput="applyFilters('budget', this.value)" placeholder="필터..."></th>
-                                    <th width="100">투찰법인<input type="text" class="filter-input" oninput="applyFilters('company', this.value)" placeholder="필터..."></th>
+                                    <th width="100">진행상태<input type="text" class="filter-input" oninput="window.applyFilters('status', this.value)" placeholder="필터..."></th>
+                                    <th width="90">분야<input type="text" class="filter-input" oninput="window.applyFilters('category', this.value)" placeholder="필터..."></th>
+                                    <th width="160">발주처<input type="text" class="filter-input" oninput="window.applyFilters('client', this.value)" placeholder="필터..."></th>
+                                    <th width="320">공고명<input type="text" class="filter-input" oninput="window.applyFilters('title', this.value)" placeholder="필터..."></th>
+                                    <th width="130">예산<input type="text" class="filter-input" oninput="window.applyFilters('budget', this.value)" placeholder="필터..."></th>
+                                    <th width="100">투찰법인<input type="text" class="filter-input" oninput="window.applyFilters('company', this.value)" placeholder="필터..."></th>
                                     <th width="120">제출일<input type="text" class="filter-input" oninput="applyFilters('date', this.value)" placeholder="필터..."></th>
                                     <th width="100">부서<input type="text" class="filter-input" oninput="applyFilters('dept', this.value)" placeholder="필터..."></th>
                                     <th width="100">작성자<input type="text" class="filter-input" oninput="applyFilters('author', this.value)" placeholder="필터..."></th>
@@ -178,29 +175,24 @@
                     </div>
                 </section>
 
+                <!-- Resources Section -->
                 <section id="tab-resources" class="hidden space-y-8 animate-in slide-in-from-right-4">
                     <h1 class="text-3xl font-bold text-slate-900 tracking-tight">자료 저장소</h1>
-                    
                     <div class="glass-card p-6 rounded-3xl border-2 border-indigo-50 bg-indigo-50/10 space-y-4">
                         <div class="flex items-center gap-2">
-                            <span class="text-xl">📁</span>
-                            <h3 class="font-bold text-slate-800">구글 드라이브 파일 연결</h3>
+                            <span class="text-xl">🔗</span>
+                            <h3 class="font-bold text-slate-800">구글 드라이브 링크 연결</h3>
                         </div>
-                        <p class="text-xs text-slate-500 italic">용량이 큰 파일은 태준님의 구글 드라이브에 업로드 후 공유 링크를 아래에 입력하세요.</p>
                         <div class="flex gap-2">
-                            <input type="text" id="driveLinkInput" placeholder="구글 드라이브 공유 링크를 입력하세요..." class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
-                            <button onclick="addDriveLink()" class="bg-indigo-600 text-white px-6 py-2 rounded-xl text-xs font-bold">링크 등록</button>
+                            <input type="text" id="driveLinkInput" placeholder="공유 링크를 입력하세요..." class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <button onclick="window.addDriveLink()" class="bg-indigo-600 text-white px-6 py-2 rounded-xl text-xs font-bold">연결</button>
                         </div>
                     </div>
-
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div id="drop-zone" class="border-2 border-dashed border-slate-200 rounded-3xl p-10 text-center flex flex-col items-center justify-center gap-4 bg-slate-50/30 transition-all">
-                            <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm text-slate-300 mb-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            </div>
-                            <p class="font-bold text-slate-800 text-sm italic">여기에 PDF를 끌어다 놓으세요</p>
+                            <p class="font-bold text-slate-800 text-sm">여기에 PDF 드롭</p>
                             <input type="file" id="fileInput" class="hidden" accept="application/pdf">
-                            <button onclick="document.getElementById('fileInput').click()" class="bg-white px-5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-indigo-600 hover:shadow-sm">또는 파일 선택</button>
+                            <button onclick="document.getElementById('fileInput').click()" class="bg-white px-5 py-2 rounded-xl border border-slate-200 text-xs font-bold text-indigo-600">파일 선택</button>
                         </div>
                         <div id="file-list" class="space-y-3 max-h-[400px] overflow-y-auto pr-2"></div>
                     </div>
@@ -209,17 +201,18 @@
         </main>
     </div>
 
+    <!-- Modals -->
     <div id="pasteModal" class="hidden fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-3xl rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+        <div class="bg-white w-full max-w-3xl rounded-3xl overflow-hidden shadow-2xl">
             <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <h3 class="text-xl font-bold text-slate-800">엑셀 데이터 대량 업로드</h3>
-                <button onclick="closePasteModal()" class="text-slate-400 font-bold px-2 hover:text-slate-900 transition-colors">닫기</button>
+                <h3 class="text-xl font-bold text-slate-800">엑셀 대량 업로드</h3>
+                <button onclick="window.closePasteModal()" class="text-slate-400 font-bold px-2">닫기</button>
             </div>
             <div class="p-8">
-                <textarea id="pasteArea" class="w-full h-80 p-5 text-xs font-mono border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none resize-none bg-slate-50 shadow-inner" placeholder="엑셀에서 데이터를 복사하여 붙여넣으세요..."></textarea>
+                <textarea id="pasteArea" class="w-full h-80 p-5 text-xs font-mono border border-slate-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none bg-slate-50" placeholder="엑셀에서 복사한 데이터를 붙여넣으세요..."></button>
                 <div class="mt-8 flex gap-3">
-                    <button onclick="parseExcelData()" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all">클라우드에 동기화</button>
-                    <button onclick="closePasteModal()" class="px-10 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all">취소</button>
+                    <button onclick="window.parseExcelData()" class="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100">동기화 시작</button>
+                    <button onclick="window.closePasteModal()" class="px-10 bg-slate-100 text-slate-600 rounded-2xl font-bold">취소</button>
                 </div>
             </div>
         </div>
@@ -227,10 +220,7 @@
 
     <div id="previewModal" class="hidden fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
         <div class="bg-white w-full max-w-6xl h-[90vh] rounded-3xl overflow-hidden shadow-2xl relative flex flex-col">
-            <div class="p-5 border-b flex justify-between items-center bg-white">
-                <h3 id="previewTitle" class="font-bold text-slate-800 truncate pr-10">파일 미리보기</h3>
-                <button onclick="closePreview()" class="px-6 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl transition-all hover:bg-slate-800">닫기</button>
-            </div>
+            <div class="p-5 border-b flex justify-between items-center"><h3 id="previewTitle" class="font-bold">파일 보기</h3><button onclick="window.closePreview()" class="px-6 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl">닫기</button></div>
             <iframe id="pdfFrame" class="w-full h-full border-none"></iframe>
         </div>
     </div>
@@ -242,26 +232,28 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // Firebase Config
         const firebaseConfig = JSON.parse(__firebase_config);
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'taejun-lab-v47-cloud';
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'taejun-stable-v48';
         const apiKey = ""; 
 
+        // State
         let user = null;
         let tasks = [];
         let bids = [];
         let files = [];
         let activeFilters = {};
 
-        // --- GLOBAL FUNCTION BINDING (CRITICAL FOR ONCLICK) ---
-        window.toggleSidebar = function() {
+        // --- GLOBAL FUNCTION BINDING (MUST BE ATTACHED TO WINDOW) ---
+        window.toggleSidebar = () => {
             document.getElementById('sidebar').classList.toggle('open');
             document.getElementById('sidebar-overlay').classList.toggle('hidden');
         };
 
-        window.showTab = function(tabId) {
+        window.showTab = (tabId) => {
             ['dashboard', 'tasks', 'bidding', 'resources'].forEach(id => {
                 const sec = document.getElementById(`tab-${id}`);
                 const nav = document.getElementById(`nav-${id}`);
@@ -271,350 +263,285 @@
             document.getElementById('current-tab-title').innerText = { 
                 dashboard: '종합 현황', tasks: '할 일 관리', bidding: '입찰 참여 시트', resources: '자료 저장소' 
             }[tabId];
-            if (window.innerWidth < 768) {
-                document.getElementById('sidebar').classList.remove('open');
-                document.getElementById('sidebar-overlay').classList.add('hidden');
-            }
+            window.toggleSidebar(); // 모바일용 닫기
         };
 
-        window.showToast = function(msg) {
+        window.showToast = (msg) => {
             const t = document.getElementById('toast'), tm = document.getElementById('toast-msg');
-            tm.innerText = msg; t.style.opacity = '1'; t.style.transform = 'translateY(0) translateX(-50%)';
+            if (tm) tm.innerText = msg;
+            t.style.opacity = '1'; t.style.transform = 'translateY(0) translateX(-50%)';
             setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(20px) translateX(-50%)'; }, 3000);
         };
 
-        // --- Auth & Sync ---
-        const initAuth = async () => {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
-            }
-        };
-
+        // --- Auth ---
         onAuthStateChanged(auth, (u) => {
             user = u;
             if (user) {
                 document.getElementById('connection-badge').classList.remove('hidden');
+                document.getElementById('sync-indicator').innerText = 'Online';
                 startSync();
             }
         });
-        initAuth();
 
+        const startAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (e) { console.error("Auth Failed", e); }
+        };
+        startAuth();
+
+        // --- Firestore Sync ---
         function startSync() {
-            if (!user) return;
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tasks'), (snap) => {
-                tasks = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'tasks'), (s) => {
+                tasks = s.docs.map(d => ({ id: d.id, ...d.data() }));
                 renderTasks();
             });
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'bids'), (snap) => {
-                bids = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'bids'), (s) => {
+                bids = s.docs.map(d => ({ id: d.id, ...d.data() }));
                 renderBids();
                 updateStats();
             });
-            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'files'), (snap) => {
-                files = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'files'), (s) => {
+                files = s.docs.map(d => ({ id: d.id, ...d.data() }));
                 renderFileList();
                 updateStats();
             });
         }
 
-        // --- Tasks Logic ---
-        window.addTask = async function() {
-            if (!user) return;
+        // --- Action Functions ---
+        window.addTask = async () => {
             const input = document.getElementById('taskInput');
-            if (!input.value.trim()) return;
-            const id = Date.now().toString();
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id), {
+            if (!input.value.trim() || !user) return;
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', Date.now().toString()), {
                 text: input.value, completed: false, createdAt: Date.now()
             });
             input.value = '';
         };
 
-        window.toggleTask = async function(id) {
+        window.toggleTask = async (id) => {
             const t = tasks.find(x => x.id === id);
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id), { completed: !t.completed });
         };
 
-        window.removeTask = async function(id) {
-            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id));
+        window.removeTask = async (id) => { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tasks', id)); };
+
+        window.addBidRow = async () => {
+            if (!user) return;
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bids', Date.now().toString()), {
+                status: '진행중', createdAt: Date.now()
+            });
         };
 
+        window.saveBidCell = async (id, field, value) => {
+            if (!user) return;
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bids', id), { [field]: value });
+        };
+
+        window.removeBidRow = async (id) => {
+            if (confirm('삭제하시겠습니까?')) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bids', id));
+        };
+
+        window.clearAllBids = async () => {
+            if (confirm('전체 삭제하시겠습니까?')) {
+                for(let b of bids) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bids', b.id));
+            }
+        };
+
+        window.openPasteModal = () => document.getElementById('pasteModal').classList.remove('hidden');
+        window.closePasteModal = () => document.getElementById('pasteModal').classList.add('hidden');
+
+        window.parseExcelData = async () => {
+            const data = document.getElementById('pasteArea').value;
+            if (!data.trim() || !user) return;
+            const rows = data.split('\n');
+            let count = 0;
+            for(let i=0; i<rows.length; i++){
+                const cols = rows[i].split('\t');
+                if (cols.length < 2 || (i===0 && rows[i].includes('상태'))) continue;
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bids', (Date.now() + i).toString()), {
+                    status: cols[0]?.trim() || '진행중', category: cols[1]?.trim() || '', client: cols[2]?.trim() || '',
+                    title: cols[3]?.trim() || '', budget: cols[4]?.trim() || '', company: cols[5]?.trim() || '',
+                    date: cols[6]?.trim() || '', dept: cols[7]?.trim() || '', author: cols[8]?.trim() || '',
+                    bidAmount: cols[9]?.trim() || '', ptStatus: cols[10]?.trim() || '', ptTime: cols[11]?.trim() || '',
+                    winner: cols[12]?.trim() || '', createdAt: Date.now()
+                });
+                count++;
+            }
+            window.closePasteModal();
+            window.showToast(`${count}건의 데이터 동기화 완료`);
+        };
+
+        window.applyFilters = (column, value) => {
+            if (!value) delete activeFilters[column];
+            else activeFilters[column] = value.toLowerCase();
+            renderBids();
+        };
+
+        window.addDriveLink = async () => {
+            const input = document.getElementById('driveLinkInput');
+            if (!input.value.trim() || !user) return;
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'files', Date.now().toString()), {
+                name: 'Google Drive File', link: input.value, type: 'link', createdAt: Date.now()
+            });
+            input.value = '';
+            window.showToast('링크 등록됨');
+        };
+
+        window.removeFile = async (id) => { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'files', id)); };
+
+        // --- Rendering ---
         function renderTasks() {
             const container = document.getElementById('taskList');
             container.innerHTML = '';
-            tasks.sort((a,b) => b.createdAt - a.createdAt).forEach(t => {
+            tasks.sort((a,b)=>b.createdAt - a.createdAt).forEach(t => {
                 const div = document.createElement('div');
                 div.className = `notion-item group hover:bg-slate-50 transition-colors rounded-xl px-2`;
                 div.innerHTML = `
-                    <input type="checkbox" class="notion-checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask('${t.id}')">
+                    <input type="checkbox" class="notion-checkbox" ${t.completed ? 'checked' : ''} onchange="window.toggleTask('${t.id}')">
                     <div class="notion-text ${t.completed ? 'completed' : ''}">${t.text}</div>
-                    <button onclick="removeTask('${t.id}')" class="opacity-0 group-hover:opacity-100 text-red-400 p-2 text-[10px] font-bold transition-all">삭제</button>
+                    <button onclick="window.removeTask('${t.id}')" class="opacity-0 group-hover:opacity-100 text-red-400 p-2 text-[10px] font-bold">삭제</button>
                 `;
                 container.appendChild(div);
             });
             renderDashboard();
         }
 
-        // --- Bidding Logic ---
-        window.addBidRow = async function() {
-            if (!user) return;
-            const id = Date.now().toString();
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bids', id), {
-                status: '진행중', createdAt: Date.now()
-            });
-        };
-
-        window.saveBidCell = async function(id, field, value) {
-            if (!user) return;
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bids', id), { [field]: value });
-        };
-
-        window.removeBidRow = async function(id) {
-            if(confirm('이 행을 삭제하시겠습니까?')) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bids', id));
-        };
-
-        window.clearAllBids = async function() {
-            if(confirm('모든 입찰 정보를 삭제하시겠습니까?')) {
-                for(let b of bids) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bids', b.id));
-            }
-        };
-
-        window.applyFilters = function(column, value) {
-            if (!value) delete activeFilters[column];
-            else activeFilters[column] = value.toLowerCase();
-            renderBids();
-        };
-
-        function getFilteredBids() {
-            return bids.filter(bid => {
-                return Object.keys(activeFilters).every(key => String(bid[key] || '').toLowerCase().includes(activeFilters[key]));
-            });
-        }
-
         function renderBids() {
             const body = document.getElementById('biddingTableBody');
             body.innerHTML = '';
-            const filtered = getFilteredBids().sort((a,b) => b.createdAt - a.createdAt);
-            filtered.forEach(bid => {
+            const filtered = bids.filter(b => Object.keys(activeFilters).every(k => String(b[k]||'').toLowerCase().includes(activeFilters[k])));
+            filtered.sort((a,b)=>b.createdAt - a.createdAt).forEach(bid => {
                 const tr = document.createElement('tr');
-                tr.dataset.id = bid.id;
                 if (bid.status === '낙찰') tr.className = 'row-status-win';
                 else if (bid.status === '제출완료') tr.className = 'row-status-submit';
                 else if (bid.status === '탈락') tr.className = 'row-status-fail';
-                
                 tr.innerHTML = `
-                    <td><select onchange="saveBidCell('${bid.id}', 'status', this.value)"><option ${bid.status=='진행중'?'selected':''}>진행중</option><option ${bid.status=='제출완료'?'selected':''}>제출완료</option><option ${bid.status=='낙찰'?'selected':''}>낙찰</option><option ${bid.status=='탈락'?'selected':''}>탈락</option></select></td>
-                    <td><input value="${bid.category || ''}" onblur="saveBidCell('${bid.id}', 'category', this.value)"></td>
-                    <td><input value="${bid.client || ''}" onblur="saveBidCell('${bid.id}', 'client', this.value)"></td>
-                    <td><input value="${bid.title || ''}" onblur="saveBidCell('${bid.id}', 'title', this.value)"></td>
-                    <td><input value="${bid.budget || ''}" onblur="saveBidCell('${bid.id}', 'budget', this.value)"></td>
-                    <td><input value="${bid.company || ''}" onblur="saveBidCell('${bid.id}', 'company', this.value)"></td>
-                    <td><input type="date" value="${bid.date || ''}" onblur="saveBidCell('${bid.id}', 'date', this.value)"></td>
-                    <td><input value="${bid.dept || ''}" onblur="saveBidCell('${bid.id}', 'dept', this.value)"></td>
-                    <td><input value="${bid.author || ''}" onblur="saveBidCell('${bid.id}', 'author', this.value)"></td>
-                    <td><input value="${bid.bidAmount || ''}" onblur="saveBidCell('${bid.id}', 'bidAmount', this.value)"></td>
-                    <td><input value="${bid.ptStatus || ''}" onblur="saveBidCell('${bid.id}', 'ptStatus', this.value)"></td>
-                    <td><input value="${bid.ptTime || ''}" onblur="saveBidCell('${bid.id}', 'ptTime', this.value)"></td>
-                    <td><input value="${bid.winner || ''}" onblur="saveBidCell('${bid.id}', 'winner', this.value)"></td>
-                    <td class="text-center"><button onclick="removeBidRow('${bid.id}')" class="text-red-500 font-bold px-2 py-1 rounded transition-all hover:bg-red-50">×</button></td>
+                    <td><select onchange="window.saveBidCell('${bid.id}', 'status', this.value)"><option ${bid.status=='진행중'?'selected':''}>진행중</option><option ${bid.status=='제출완료'?'selected':''}>제출완료</option><option ${bid.status=='낙찰'?'selected':''}>낙찰</option><option ${bid.status=='탈락'?'selected':''}>탈락</option></select></td>
+                    <td><input value="${bid.category||''}" onblur="window.saveBidCell('${bid.id}', 'category', this.value)"></td>
+                    <td><input value="${bid.client||''}" onblur="window.saveBidCell('${bid.id}', 'client', this.value)"></td>
+                    <td><input value="${bid.title||''}" onblur="window.saveBidCell('${bid.id}', 'title', this.value)"></td>
+                    <td><input value="${bid.budget||''}" onblur="window.saveBidCell('${bid.id}', 'budget', this.value)"></td>
+                    <td><input value="${bid.company||''}" onblur="window.saveBidCell('${bid.id}', 'company', this.value)"></td>
+                    <td><input type="date" value="${bid.date||''}" onblur="window.saveBidCell('${bid.id}', 'date', this.value)"></td>
+                    <td><input value="${bid.dept||''}" onblur="window.saveBidCell('${bid.id}', 'dept', this.value)"></td>
+                    <td><input value="${bid.author||''}" onblur="window.saveBidCell('${bid.id}', 'author', this.value)"></td>
+                    <td><input value="${bid.bidAmount||''}" onblur="window.saveBidCell('${bid.id}', 'bidAmount', this.value)"></td>
+                    <td><input value="${bid.ptStatus||''}" onblur="window.saveBidCell('${bid.id}', 'ptStatus', this.value)"></td>
+                    <td><input value="${bid.ptTime||''}" onblur="window.saveBidCell('${bid.id}', 'ptTime', this.value)"></td>
+                    <td><input value="${bid.winner||''}" onblur="window.saveBidCell('${bid.id}', 'winner', this.value)"></td>
+                    <td class="text-center"><button onclick="window.removeBidRow('${bid.id}')" class="text-red-500 font-bold">×</button></td>
                 `;
                 body.appendChild(tr);
             });
         }
 
-        // --- Excel Import ---
-        window.openPasteModal = () => document.getElementById('pasteModal').classList.remove('hidden');
-        window.closePasteModal = () => document.getElementById('pasteModal').classList.add('hidden');
-
-        window.parseExcelData = async function() {
-            if (!user) return;
-            const data = document.getElementById('pasteArea').value;
-            if (!data.trim()) return;
-
-            const rows = data.split('\n');
-            let count = 0;
-            for (let i = 0; i < rows.length; i++) {
-                const row = rows[i];
-                const cols = row.split('\t');
-                if (cols.length < 2) continue;
-                if (i === 0 && (row.includes('상태') || row.includes('분야'))) continue;
-
-                const id = (Date.now() + Math.random()).toString();
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bids', id), {
-                    status: cols[0]?.trim() || '진행중',
-                    category: cols[1]?.trim() || '',
-                    client: cols[2]?.trim() || '',
-                    title: cols[3]?.trim() || '',
-                    budget: cols[4]?.trim() || '',
-                    company: cols[5]?.trim() || '',
-                    date: cols[6]?.trim() || '',
-                    dept: cols[7]?.trim() || '',
-                    author: cols[8]?.trim() || '',
-                    bidAmount: cols[9]?.trim() || '',
-                    ptStatus: cols[10]?.trim() || '',
-                    ptTime: cols[11]?.trim() || '',
-                    winner: cols[12]?.trim() || '',
-                    createdAt: Date.now()
-                });
-                count++;
-            }
-            closePasteModal();
-            window.showToast(`${count}건의 데이터가 업로드되었습니다.`);
-        };
-
-        // --- Resources (Files & Drive) ---
-        window.addDriveLink = async function() {
-            const input = document.getElementById('driveLinkInput');
-            if (!input.value.trim() || !user) return;
-            const id = Date.now().toString();
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'files', id), {
-                name: '구글 드라이브 파일', link: input.value, type: 'link', createdAt: Date.now()
-            });
-            input.value = '';
-            window.showToast('드라이브 링크 등록 완료');
-        };
-
-        const handleFileUpload = async (file) => {
-            if (!file || file.type !== 'application/pdf') {
-                window.showToast('PDF 파일만 지원합니다.');
-                return;
-            }
-            if (file.size > 800 * 1024) {
-                window.showToast('800KB 이하의 파일만 클라우드에 직접 올릴 수 있습니다.');
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const id = Date.now().toString();
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'files', id), {
-                    name: file.name, data: e.target.result, type: 'pdf', createdAt: Date.now()
-                });
-                window.showToast('파일 클라우드 업로드 완료');
-            };
-            reader.readAsDataURL(file);
-        };
-
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('fileInput');
-
-        if (fileInput) fileInput.onchange = (e) => handleFileUpload(e.target.files[0]);
-        if (dropZone) {
-            dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('drop-active'); };
-            dropZone.ondragleave = () => dropZone.classList.remove('drop-active');
-            dropZone.ondrop = (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('drop-active');
-                handleFileUpload(e.dataTransfer.files[0]);
-            };
-        }
-
-        window.removeFile = async (id) => { await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'files', id)); };
-
         function renderFileList() {
             const container = document.getElementById('file-list');
-            if (!container) return;
-            container.innerHTML = files.length ? '' : '<div class="p-8 text-center text-slate-300 text-xs italic">업로드된 자료가 없습니다.</div>';
-            files.sort((a,b) => b.createdAt - a.createdAt).forEach(f => {
+            container.innerHTML = files.length ? '' : '<div class="p-8 text-center text-slate-300 text-xs">자료 없음</div>';
+            files.sort((a,b)=>b.createdAt - a.createdAt).forEach(f => {
                 const isLink = f.type === 'link';
                 const card = document.createElement('div');
-                card.className = "flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:shadow-md transition-all";
+                card.className = "flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm transition-all";
                 card.innerHTML = `
-                    <div class="flex items-center gap-3 overflow-hidden">
-                        <div class="w-10 h-10 ${isLink ? 'bg-amber-50 text-amber-500' : 'bg-indigo-50 text-indigo-500'} rounded-xl flex items-center justify-center font-black text-[10px] shrink-0">
-                            ${isLink ? 'LINK' : 'PDF'}
-                        </div>
-                        <div class="overflow-hidden">
-                            <p class="font-bold text-xs truncate text-slate-700">${f.name}</p>
-                            <p class="text-[9px] text-slate-400 uppercase font-black tracking-widest">${isLink ? 'Google Drive' : 'Cloud DB'}</p>
-                        </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-[10px] ${isLink ? 'bg-amber-100 text-amber-600':'bg-indigo-100 text-indigo-600'}">${isLink?'LINK':'PDF'}</div>
+                        <p class="font-bold text-xs truncate max-w-[150px]">${f.name}</p>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="${isLink ? `window.open('${f.link}', '_blank')` : `previewFile('${f.id}')`}" class="px-3 py-1.5 bg-slate-50 text-[10px] font-bold rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition-colors">열기</button>
-                        <button onclick="removeFile('${f.id}')" class="p-1.5 text-slate-300 hover:text-red-500 transition-colors">×</button>
+                        <button onclick="${isLink?`window.open('${f.link}','_blank')`:`window.previewFile('${f.id}')`}" class="px-3 py-1 bg-slate-100 rounded-lg text-[10px] font-bold">열기</button>
+                        <button onclick="window.removeFile('${f.id}')" class="text-red-300 hover:text-red-500">×</button>
                     </div>
                 `;
                 container.appendChild(card);
             });
         }
 
-        window.previewFile = function(id) {
-            const f = files.find(file => file.id === id);
+        window.previewFile = (id) => {
+            const f = files.find(x => x.id === id);
+            if (!f) return;
             document.getElementById('previewTitle').innerText = f.name;
             document.getElementById('pdfFrame').src = f.data;
             document.getElementById('previewModal').classList.remove('hidden');
         };
+
         window.closePreview = () => document.getElementById('previewModal').classList.add('hidden');
 
-        // --- AI Analysis ---
-        window.analyzeBidsWithAI = async function() {
-            const filtered = getFilteredBids();
-            if (filtered.length === 0) { window.showToast("분석할 입찰 데이터가 없습니다."); return; }
+        window.analyzeBidsWithAI = async () => {
+            const filtered = bids.filter(b => Object.keys(activeFilters).every(k => String(b[k]||'').toLowerCase().includes(activeFilters[k])));
+            if (filtered.length === 0) { window.showToast("분석할 데이터가 없습니다."); return; }
             const btn = document.getElementById('ai-btn');
             const content = document.getElementById('ai-content');
             btn.disabled = true;
             document.getElementById('ai-insight-panel').classList.remove('hidden');
-            content.innerText = "연구원이 전체 데이터를 클라우드에서 수집하여 분석 리포트를 작성 중입니다...";
-
-            const summary = filtered.map(b => `- ${b.title}: ${b.bidAmount} 투찰 (${b.status})`).join('\n');
-            const systemPrompt = `당신은 '태준실험실'의 AI 전임 연구원입니다. 입찰 참여 데이터를 기반으로 예산 타당성, PT 전략, 낙찰 확률 증대 방안을 아주 전문적인 어조로 분석하여 제언하세요.`;
-
+            content.innerText = "데이터 분석 중...";
+            const summary = filtered.map(b => `- ${b.title}: ${b.bidAmount} (${b.status})`).join('\n');
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: `데이터 정보:\n${summary}` }] }],
-                        systemInstruction: { parts: [{ text: systemPrompt }] }
-                    })
+                    body: JSON.stringify({ contents: [{ parts: [{ text: `데이터 요약:\n${summary}` }] }], systemInstruction: { parts: [{ text: `태준 연구원의 AI 비서입니다. 입찰 성공을 위한 날카로운 분석을 한국어로 작성하세요.` }] } })
                 });
-                const result = await response.json();
-                content.innerText = result.candidates?.[0]?.content?.parts?.[0]?.text || "리포트 생성 실패";
-            } catch (err) { content.innerText = "분석 서버 연결에 실패했습니다."; }
+                const res = await response.json();
+                content.innerText = res.candidates?.[0]?.content?.parts?.[0]?.text || "리포트 생성 오류";
+            } catch (e) { content.innerText = "서버 연결 오류"; }
             finally { btn.disabled = false; }
         };
 
-        // --- Stats & Dashboard ---
         function renderDashboard() {
             const container = document.getElementById('dashboard-task-list');
-            if (!container) return;
             const recent = [...tasks].sort((a,b)=>b.createdAt - a.createdAt).slice(0,3);
-            container.innerHTML = recent.length ? '' : '<div class="py-10 text-center text-slate-300 text-xs col-span-3 italic">할 일 목록이 비어 있습니다.</div>';
+            container.innerHTML = recent.length ? '' : '<div class="py-10 text-center text-slate-300 text-xs italic">과제 없음</div>';
             recent.forEach(t => {
                 const div = document.createElement('div');
                 div.className = "flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm";
-                div.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-2 h-2 rounded-full ${t.completed ? 'bg-green-500' : 'bg-amber-400'}"></div>
-                        <span class="text-xs font-semibold ${t.completed ? 'text-slate-300 line-through' : 'text-slate-700'}">${t.text}</span>
-                    </div>
-                    <span class="text-[9px] font-black text-slate-300 uppercase">${t.completed ? 'Done' : 'Active'}</span>
-                `;
+                div.innerHTML = `<div class="flex items-center gap-3"><div class="w-2 h-2 rounded-full ${t.completed ? 'bg-green-500':'bg-amber-400'}"></div><span class="text-xs font-semibold ${t.completed?'text-slate-300 line-through':'text-slate-700'}">${t.text}</span></div>`;
                 container.appendChild(div);
             });
         }
 
         function updateStats() {
-            const progress = bids.length ? Math.round((bids.filter(b=>b.status==='낙찰').length / bids.length) * 100) : 0;
-            const t = document.getElementById('stat-total');
-            const b = document.getElementById('stat-bids');
-            const p = document.getElementById('stat-progress');
-            const f = document.getElementById('stat-files');
-            if (t) t.innerText = tasks.length;
-            if (b) b.innerText = bids.length;
-            if (p) p.innerText = progress + '%';
-            if (f) f.innerText = files.length;
+            const winCount = bids.filter(b=>b.status==='낙찰').length;
+            const progress = bids.length ? Math.round((winCount / bids.length) * 100) : 0;
+            document.getElementById('stat-total').innerText = tasks.length;
+            document.getElementById('stat-bids').innerText = bids.length;
+            document.getElementById('stat-progress').innerText = progress + '%';
+            document.getElementById('stat-files').innerText = files.length;
         }
 
-        function updateClock() { 
-            const now = new Date();
+        // --- File Upload ---
+        const handleFileUpload = async (file) => {
+            if (!file || file.type !== 'application/pdf') return;
+            if (file.size > 800 * 1024) { window.showToast('800KB 미만만 지원합니다.'); return; }
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'files', Date.now().toString()), {
+                    name: file.name, data: e.target.result, type: 'pdf', createdAt: Date.now()
+                });
+                window.showToast('업로드 완료');
+            };
+            reader.readAsDataURL(file);
+        };
+
+        const dz = document.getElementById('drop-zone');
+        if(dz){
+            dz.ondragover = (e) => { e.preventDefault(); dz.classList.add('drop-active'); };
+            dz.ondragleave = () => dz.classList.remove('drop-active');
+            dz.ondrop = (e) => { e.preventDefault(); dz.classList.remove('drop-active'); handleFileUpload(e.dataTransfer.files[0]); };
+        }
+        document.getElementById('fileInput').onchange = (e) => handleFileUpload(e.target.files[0]);
+
+        // Clock
+        const updateClock = () => {
             const clock = document.getElementById('digital-clock');
-            if (clock) clock.innerText = now.toLocaleString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' }); 
-        }
+            if(clock) clock.innerText = new Date().toLocaleString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' });
+        };
         setInterval(updateClock, 1000); updateClock();
+        document.getElementById('taskInput').onkeydown = (e) => { if(e.key === 'Enter') window.addTask(); };
 
-        const taskInput = document.getElementById('taskInput');
-        if (taskInput) taskInput.onkeydown = (e) => { if(e.key === 'Enter') window.addTask(); };
     </script>
 </body>
 </html>

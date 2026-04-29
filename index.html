@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Microscope, 
   FlaskConical, 
@@ -12,13 +12,17 @@ import {
   Search,
   TrendingUp,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Plus,
+  MoreHorizontal,
+  ChevronRight,
+  ChevronDown
 } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
 
-// --- Firebase 초기화 (크로스 디바이스 동기화용) ---
+// --- Firebase 초기화 ---
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 let app, auth, db;
 try {
@@ -26,17 +30,17 @@ try {
   auth = getAuth(app);
   db = getFirestore(app);
 } catch (e) {
-  console.error("Firebase 초기화 오류 (미리보기 환경에서는 무시해도 됩니다):", e);
+  console.error("Firebase 초기화 오류:", e);
 }
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'personal-dashboard';
 
 export default function App() {
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('checklist'); // 확인을 위해 기본 탭을 체크리스트로 변경
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 대시보드 샘플 데이터 (추후 DB 연동)
+  // 대시보드 샘플 데이터
   const [stats, setStats] = useState({
     salesTarget: 75,
     activeBids: 3,
@@ -44,14 +48,7 @@ export default function App() {
     pendingFiles: 5
   });
 
-  // 간단한 체크리스트 (Firebase 연동 테스트용)
-  const [todos, setTodos] = useState([
-    { id: 1, text: '주간 영업 보고서 작성', completed: false },
-    { id: 2, text: 'A사 입찰 서류 검토', completed: true },
-    { id: 3, text: '팀 주간 회의 준비', completed: false },
-  ]);
-
-  // Firebase 인증 처리 (자동 로그인)
+  // Firebase 인증 처리
   useEffect(() => {
     if (!auth) {
       setIsLoading(false);
@@ -77,7 +74,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // 네비게이션 메뉴 정의 (실험실 테마 아이콘 적용)
+  // 네비게이션 메뉴 정의
   const navigation = [
     { id: 'dashboard', name: '대시보드', icon: Microscope },
     { id: 'sales', name: '영업 관리', icon: TrendingUp },
@@ -89,21 +86,324 @@ export default function App() {
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
-    setIsMobileMenuOpen(false); // 모바일에서 탭 이동 시 메뉴 닫기
+    setIsMobileMenuOpen(false);
   };
 
-  const toggleTodo = (id) => {
-    setTodos(todos.map(todo => 
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    ));
-    // 추후 이 부분에 Firebase updateDoc 로직이 들어갑니다.
+  // --------------------------------------------------------
+  // [체크리스트 탭 컴포넌트] 노션 스타일 주차별 관리 에디터
+  // --------------------------------------------------------
+  const ChecklistView = () => {
+    const [weeks, setWeeks] = useState([]);
+    const [activeWeekId, setActiveWeekId] = useState(null);
+    const [blocks, setBlocks] = useState([]); // 현재 선택된 주차의 블록(줄)들
+    const [weekTitle, setWeekTitle] = useState("");
+    const inputRefs = useRef({});
+
+    // 1. 주차 리스트 로드 (Firebase)
+    useEffect(() => {
+      if (!user || !db) return;
+      const weeksRef = collection(db, 'artifacts', appId, 'users', user.uid, 'checklist_weeks');
+      
+      const unsubscribe = onSnapshot(weeksRef, (snapshot) => {
+        const weeksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // 생성일 기준 내림차순 정렬 (최신 주차가 위로)
+        weeksData.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        setWeeks(weeksData);
+        
+        // 초기 로드 시 선택된 주차가 없으면 가장 첫 번째 주차 선택
+        if (weeksData.length > 0 && !activeWeekId) {
+          setActiveWeekId(weeksData[0].id);
+        }
+      }, (error) => console.error("주차 리스트 로드 실패:", error));
+
+      return () => unsubscribe();
+    }, [user, activeWeekId]);
+
+    // 2. 선택된 주차의 상세 블록 로드 (Firebase)
+    useEffect(() => {
+      if (!user || !db || !activeWeekId) {
+        setBlocks([]);
+        return;
+      }
+      
+      const weekDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'checklist_weeks', activeWeekId);
+      const unsubscribe = onSnapshot(weekDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setWeekTitle(data.title || "제목 없음");
+          // 블록이 없으면 빈 텍스트 블록 하나 생성
+          const loadedBlocks = data.blocks && data.blocks.length > 0 
+            ? data.blocks 
+            : [{ id: crypto.randomUUID(), type: 'text', text: '', completed: false }];
+          setBlocks(loadedBlocks);
+        }
+      }, (error) => console.error("블록 로드 실패:", error));
+
+      return () => unsubscribe();
+    }, [user, activeWeekId]);
+
+    // Firestore에 현재 블록들 저장 (디바운스/수동 호출 용도)
+    const saveBlocksToFirebase = useCallback(async (newBlocks, newTitle = weekTitle) => {
+      if (!user || !db || !activeWeekId) return;
+      try {
+        const weekDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'checklist_weeks', activeWeekId);
+        await updateDoc(weekDocRef, {
+          title: newTitle,
+          blocks: newBlocks,
+          updatedAt: Date.now()
+        });
+      } catch (error) {
+        console.error("블록 저장 실패:", error);
+      }
+    }, [user, activeWeekId, weekTitle]);
+
+    // 새 주차 생성
+    const handleAddWeek = async () => {
+      if (!user || !db) return;
+      const today = new Date();
+      const weekNum = Math.ceil(today.getDate() / 7);
+      const newTitle = `${today.getMonth() + 1}월 ${weekNum}주차`;
+      
+      try {
+        const weeksRef = collection(db, 'artifacts', appId, 'users', user.uid, 'checklist_weeks');
+        const docRef = await addDoc(weeksRef, {
+          title: newTitle,
+          blocks: [{ id: crypto.randomUUID(), type: 'text', text: '', completed: false }],
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        });
+        setActiveWeekId(docRef.id);
+      } catch (error) {
+        console.error("새 주차 생성 실패:", error);
+      }
+    };
+
+    // --- 노션 스타일 블록 에디터 로직 ---
+    
+    // 블록 내용 변경 (단축키 감지 포함)
+    const handleBlockChange = (index, id, newText) => {
+      const newBlocks = [...blocks];
+      let currentBlock = { ...newBlocks[index] };
+
+      // 마크다운/노션 단축키 파싱 로직
+      if (currentBlock.type === 'text') {
+        if (newText === '[] ' || newText === '[ ] ') {
+          currentBlock.type = 'todo';
+          currentBlock.text = '';
+          currentBlock.completed = false;
+        } else if (newText === '[x] ' || newText === '[v] ') {
+          currentBlock.type = 'todo';
+          currentBlock.text = '';
+          currentBlock.completed = true;
+        } else if (newText === '> ') {
+          currentBlock.type = 'toggle';
+          currentBlock.text = '';
+        } else if (newText === '- ') {
+          currentBlock.type = 'bullet';
+          currentBlock.text = '';
+        } else if (newText === '# ') {
+          currentBlock.type = 'h1';
+          currentBlock.text = '';
+        } else {
+          currentBlock.text = newText;
+        }
+      } else {
+        currentBlock.text = newText;
+      }
+
+      newBlocks[index] = currentBlock;
+      setBlocks(newBlocks);
+    };
+
+    // 키보드 네비게이션 및 새 블록 생성 (Enter, Backspace)
+    const handleKeyDown = (e, index, id) => {
+      if (e.key === 'Enter') {
+        e.preventDefault(); // 기본 줄바꿈 방지
+        const newBlocks = [...blocks];
+        const newId = crypto.randomUUID();
+        
+        // 현재 블록이 체크리스트면, 다음 블록도 체크리스트로
+        const nextType = newBlocks[index].type === 'todo' ? 'todo' : 'text';
+        
+        newBlocks.splice(index + 1, 0, { id: newId, type: nextType, text: '', completed: false });
+        setBlocks(newBlocks);
+        saveBlocksToFirebase(newBlocks);
+        
+        // 다음 렌더링 후 새 블록으로 포커스 이동
+        setTimeout(() => {
+          if (inputRefs.current[newId]) inputRefs.current[newId].focus();
+        }, 50);
+      } 
+      else if (e.key === 'Backspace' && blocks[index].text === '') {
+        // 내용이 비어있을 때 백스페이스 누르면:
+        if (blocks[index].type !== 'text') {
+          // 1. 타입이 있으면 일반 텍스트로 되돌림
+          e.preventDefault();
+          const newBlocks = [...blocks];
+          newBlocks[index].type = 'text';
+          setBlocks(newBlocks);
+          saveBlocksToFirebase(newBlocks);
+        } else if (blocks.length > 1) {
+          // 2. 타입도 텍스트면 해당 블록 삭제 및 위로 포커스 이동
+          e.preventDefault();
+          const newBlocks = [...blocks];
+          newBlocks.splice(index, 1);
+          setBlocks(newBlocks);
+          saveBlocksToFirebase(newBlocks);
+          
+          const prevId = newBlocks[index - 1] ? newBlocks[index - 1].id : newBlocks[0].id;
+          setTimeout(() => {
+            if (inputRefs.current[prevId]) inputRefs.current[prevId].focus();
+          }, 50);
+        }
+      }
+      else if (e.key === 'ArrowUp' && index > 0) {
+        e.preventDefault();
+        inputRefs.current[blocks[index - 1].id]?.focus();
+      }
+      else if (e.key === 'ArrowDown' && index < blocks.length - 1) {
+        e.preventDefault();
+        inputRefs.current[blocks[index + 1].id]?.focus();
+      }
+    };
+
+    // 체크박스 클릭 처리
+    const toggleTodoCompleted = (index) => {
+      const newBlocks = [...blocks];
+      newBlocks[index].completed = !newBlocks[index].completed;
+      setBlocks(newBlocks);
+      saveBlocksToFirebase(newBlocks);
+    };
+
+    // 블록 렌더링 도우미
+    const renderBlockIcon = (block, index) => {
+      switch (block.type) {
+        case 'todo':
+          return (
+            <button 
+              onClick={() => toggleTodoCompleted(index)}
+              className="mr-2 mt-1 w-5 h-5 flex-shrink-0 flex items-center justify-center border rounded hover:bg-slate-50 transition-colors"
+              style={{ 
+                borderColor: block.completed ? '#0ea5e9' : '#cbd5e1', 
+                backgroundColor: block.completed ? '#0ea5e9' : 'transparent' 
+              }}
+            >
+              {block.completed && <CheckSquare size={14} color="white" />}
+            </button>
+          );
+        case 'bullet':
+          return <div className="mr-3 ml-2 mt-2.5 w-1.5 h-1.5 rounded-full bg-slate-800 flex-shrink-0"></div>;
+        case 'toggle':
+          return <ChevronRight size={20} className="mr-1 mt-0.5 text-slate-400 flex-shrink-0" />;
+        default:
+          return null; // text, h1 등은 아이콘 없음
+      }
+    };
+
+    // 제목 변경 시
+    const handleTitleChange = (e) => {
+      setWeekTitle(e.target.value);
+    };
+    const handleTitleBlur = () => {
+      saveBlocksToFirebase(blocks, weekTitle);
+    };
+
+    return (
+      <div className="flex h-full bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fadeIn">
+        {/* 왼쪽: 주차 사이드바 */}
+        <div className="w-64 bg-slate-50 border-r border-slate-200 flex flex-col">
+          <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-100/50">
+            <span className="font-semibold text-slate-700 text-sm">페이지 관리</span>
+            <button onClick={handleAddWeek} className="text-slate-500 hover:text-slate-800 hover:bg-slate-200 p-1 rounded transition">
+              <Plus size={18} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto py-2">
+            {weeks.length === 0 ? (
+              <div className="text-center text-slate-400 text-xs mt-4">새 페이지를 추가해주세요.</div>
+            ) : (
+              weeks.map(week => (
+                <div 
+                  key={week.id}
+                  onClick={() => setActiveWeekId(week.id)}
+                  className={`flex items-center px-4 py-2 cursor-pointer text-sm transition-colors ${
+                    activeWeekId === week.id ? 'bg-slate-200/60 font-medium text-slate-800' : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  <FileText size={16} className="mr-2 text-slate-400" />
+                  <span className="truncate flex-1">{week.title || "제목 없음"}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* 오른쪽: 노션 스타일 에디터 영역 */}
+        <div className="flex-1 overflow-y-auto p-8 lg:px-24 xl:px-32 relative">
+          {activeWeekId ? (
+            <div className="max-w-3xl mx-auto pb-32">
+              {/* 제목 영역 */}
+              <input
+                type="text"
+                value={weekTitle}
+                onChange={handleTitleChange}
+                onBlur={handleTitleBlur}
+                placeholder="제목 없음"
+                className="w-full text-4xl font-bold text-slate-800 mb-8 border-none focus:outline-none focus:ring-0 placeholder-slate-300 bg-transparent"
+              />
+              
+              {/* 블록 영역 */}
+              <div className="space-y-1">
+                {blocks.map((block, index) => {
+                  let textStyle = "flex-1 text-slate-700 border-none focus:outline-none focus:ring-0 bg-transparent py-1";
+                  
+                  // 타입에 따른 스타일 적용
+                  if (block.type === 'h1') textStyle += " text-2xl font-bold mt-4 mb-2";
+                  if (block.type === 'todo' && block.completed) textStyle += " text-slate-400 line-through";
+
+                  return (
+                    <div key={block.id} className="flex items-start group">
+                      {/* 드래그 핸들 (시각적 효과만) */}
+                      <div className="opacity-0 group-hover:opacity-100 cursor-grab p-1 mr-1 mt-0.5 text-slate-300">
+                        <MoreHorizontal size={16} />
+                      </div>
+                      
+                      {/* 블록 아이콘 (체크박스, 불릿 등) */}
+                      {renderBlockIcon(block, index)}
+                      
+                      {/* 블록 텍스트 입력 */}
+                      <input
+                        ref={el => inputRefs.current[block.id] = el}
+                        type="text"
+                        value={block.text}
+                        onChange={(e) => handleBlockChange(index, block.id, e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(e, index, block.id)}
+                        onBlur={() => saveBlocksToFirebase(blocks)}
+                        placeholder={block.type === 'text' ? "명령어를 사용하려면 '[] ', '- ', '# ' 등을 입력하세요" : ""}
+                        className={textStyle}
+                        style={{ minHeight: '24px' }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-slate-400">
+              <CheckSquare size={48} className="mb-4 opacity-50" />
+              <p>좌측에서 주차를 선택하거나 추가해주세요.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-screen bg-slate-50 text-slate-500">데이터를 불러오는 중입니다...</div>;
   }
 
-  // --- 컴포넌트: 대시보드 뷰 ---
+  // --- 기존 대시보드 뷰 ---
   const DashboardView = () => (
     <div className="space-y-6 animate-fadeIn">
       {/* 요약 카드 */}
@@ -146,7 +446,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* 하단 영역: 최근 업무 & 퀵 체크리스트 */}
+      {/* 하단 영역 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 최근 진행 현황 */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
@@ -173,29 +473,6 @@ export default function App() {
             </div>
           </div>
         </div>
-
-        {/* 퀵 체크리스트 */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-bold text-slate-800">오늘의 실험(체크)리스트</h3>
-            <button className="text-sm text-teal-600 hover:text-teal-800" onClick={() => handleTabChange('checklist')}>관리</button>
-          </div>
-          <div className="space-y-2">
-            {todos.map(todo => (
-              <label key={todo.id} className="flex items-center p-3 border border-slate-100 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors">
-                <input 
-                  type="checkbox" 
-                  checked={todo.completed}
-                  onChange={() => toggleTodo(todo.id)}
-                  className="w-5 h-5 text-teal-600 rounded focus:ring-teal-500 border-slate-300"
-                />
-                <span className={`ml-3 text-sm ${todo.completed ? 'text-slate-400 line-through' : 'text-slate-700 font-medium'}`}>
-                  {todo.text}
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -220,7 +497,7 @@ export default function App() {
       case 'bids': return <PlaceholderView title="입찰 리스트" icon={FileText} />;
       case 'team': return <PlaceholderView title="팀 진척도" icon={Users} />;
       case 'files': return <PlaceholderView title="파일 저장소" icon={Archive} />;
-      case 'checklist': return <PlaceholderView title="상세 체크리스트" icon={CheckSquare} />;
+      case 'checklist': return <ChecklistView />; // 새로 만든 뷰 적용
       default: return <DashboardView />;
     }
   };
@@ -336,13 +613,13 @@ export default function App() {
           </div>
         </header>
 
-        {/* 탭 내용 스크롤 영역 */}
-        <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
+        {/* 탭 내용 (가득 차게 렌더링) */}
+        <div className="flex-1 overflow-hidden p-4 md:p-6 lg:p-8">
           {renderContent()}
         </div>
       </main>
 
-      {/* Tailwind CSS를 위한 간단한 인라인 스타일 (애니메이션) */}
+      {/* Tailwind CSS 애니메이션 설정 */}
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(10px); }

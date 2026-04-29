@@ -1,284 +1,360 @@
 import React, { useState, useEffect } from 'react';
 import { 
+  Microscope, 
   FlaskConical, 
-  Search, 
-  LayoutDashboard, 
-  Users, 
   FileText, 
-  Briefcase, 
-  Upload, 
-  HardDrive, 
-  Settings, 
-  Bell,
-  CheckCircle2,
+  Users, 
+  Archive, 
+  CheckSquare, 
+  Menu, 
+  X, 
+  Bell, 
+  Search,
+  TrendingUp,
   Clock,
-  ExternalLink,
-  Plus,
-  StickyNote
+  AlertCircle
 } from 'lucide-react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 
-const App = () => {
+// --- Firebase 초기화 (크로스 디바이스 동기화용) ---
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+let app, auth, db;
+try {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+} catch (e) {
+  console.error("Firebase 초기화 오류 (미리보기 환경에서는 무시해도 됩니다):", e);
+}
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'personal-dashboard';
+
+export default function App() {
+  const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [isSidebarOpen, setSidebarOpen] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // 가상의 데이터
-  const teamProgress = [
-    { name: '김철수', task: '상반기 영업 전략', progress: 85, status: '진행중' },
-    { name: '이영희', task: '정부 입찰 제안서', progress: 40, status: '대기' },
-    { name: '박지민', task: '클라이언트 미팅', progress: 100, status: '완료' },
-    { name: '최동욱', task: '시장 조사 분석', progress: 60, status: '진행중' },
+  // 대시보드 샘플 데이터 (추후 DB 연동)
+  const [stats, setStats] = useState({
+    salesTarget: 75,
+    activeBids: 3,
+    teamTasks: 12,
+    pendingFiles: 5
+  });
+
+  // 간단한 체크리스트 (Firebase 연동 테스트용)
+  const [todos, setTodos] = useState([
+    { id: 1, text: '주간 영업 보고서 작성', completed: false },
+    { id: 2, text: 'A사 입찰 서류 검토', completed: true },
+    { id: 3, text: '팀 주간 회의 준비', completed: false },
+  ]);
+
+  // Firebase 인증 처리 (자동 로그인)
+  useEffect(() => {
+    if (!auth) {
+      setIsLoading(false);
+      return;
+    }
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (error) {
+        console.error("인증 실패:", error);
+      }
+    };
+    initAuth();
+
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 네비게이션 메뉴 정의 (실험실 테마 아이콘 적용)
+  const navigation = [
+    { id: 'dashboard', name: '대시보드', icon: Microscope },
+    { id: 'sales', name: '영업 관리', icon: TrendingUp },
+    { id: 'bids', name: '입찰 리스트', icon: FileText },
+    { id: 'team', name: '팀 진척도', icon: Users },
+    { id: 'files', name: '파일 저장소', icon: Archive },
+    { id: 'checklist', name: '체크리스트', icon: CheckSquare },
   ];
 
-  const bidList = [
-    { title: 'A 공공기관 전산화 사업', dueDate: '2024-05-15', budget: '2.5억', importance: '상' },
-    { title: 'B 기업 통합 솔루션 구축', dueDate: '2024-06-01', budget: '1.8억', importance: '중' },
-  ];
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setIsMobileMenuOpen(false); // 모바일에서 탭 이동 시 메뉴 닫기
+  };
+
+  const toggleTodo = (id) => {
+    setTodos(todos.map(todo => 
+      todo.id === id ? { ...todo, completed: !todo.completed } : todo
+    ));
+    // 추후 이 부분에 Firebase updateDoc 로직이 들어갑니다.
+  };
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen bg-slate-50 text-slate-500">데이터를 불러오는 중입니다...</div>;
+  }
+
+  // --- 컴포넌트: 대시보드 뷰 ---
+  const DashboardView = () => (
+    <div className="space-y-6 animate-fadeIn">
+      {/* 요약 카드 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-4">
+          <div className="p-3 bg-teal-50 text-teal-600 rounded-lg">
+            <TrendingUp size={24} />
+          </div>
+          <div>
+            <p className="text-sm text-slate-500 font-medium">영업 목표 달성률</p>
+            <p className="text-2xl font-bold text-slate-800">{stats.salesTarget}%</p>
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-4">
+          <div className="p-3 bg-cyan-50 text-cyan-600 rounded-lg">
+            <FileText size={24} />
+          </div>
+          <div>
+            <p className="text-sm text-slate-500 font-medium">진행중인 입찰</p>
+            <p className="text-2xl font-bold text-slate-800">{stats.activeBids}건</p>
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-4">
+          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg">
+            <Users size={24} />
+          </div>
+          <div>
+            <p className="text-sm text-slate-500 font-medium">팀 할당 업무</p>
+            <p className="text-2xl font-bold text-slate-800">{stats.teamTasks}개</p>
+          </div>
+        </div>
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-4">
+          <div className="p-3 bg-amber-50 text-amber-600 rounded-lg">
+            <Archive size={24} />
+          </div>
+          <div>
+            <p className="text-sm text-slate-500 font-medium">검토 대기 파일</p>
+            <p className="text-2xl font-bold text-slate-800">{stats.pendingFiles}개</p>
+          </div>
+        </div>
+      </div>
+
+      {/* 하단 영역: 최근 업무 & 퀵 체크리스트 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 최근 진행 현황 */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-bold text-slate-800">최근 진행 현황</h3>
+            <button className="text-sm text-teal-600 hover:text-teal-800" onClick={() => handleTabChange('bids')}>전체보기</button>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center p-3 hover:bg-slate-50 rounded-lg transition-colors">
+              <Clock className="text-slate-400 mr-3" size={20} />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-slate-800">B공공기관 구축 사업 입찰</p>
+                <p className="text-xs text-slate-500">제안서 작성 중 (마감 D-3)</p>
+              </div>
+              <span className="px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-full font-medium">진행중</span>
+            </div>
+            <div className="flex items-center p-3 hover:bg-slate-50 rounded-lg transition-colors">
+              <AlertCircle className="text-slate-400 mr-3" size={20} />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-slate-800">C사 영업 미팅 결과 보고</p>
+                <p className="text-xs text-slate-500">김대리 작성 완료, 검토 대기</p>
+              </div>
+              <span className="px-2 py-1 bg-teal-100 text-teal-800 text-xs rounded-full font-medium">검토요망</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 퀵 체크리스트 */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-bold text-slate-800">오늘의 실험(체크)리스트</h3>
+            <button className="text-sm text-teal-600 hover:text-teal-800" onClick={() => handleTabChange('checklist')}>관리</button>
+          </div>
+          <div className="space-y-2">
+            {todos.map(todo => (
+              <label key={todo.id} className="flex items-center p-3 border border-slate-100 rounded-lg hover:bg-slate-50 cursor-pointer transition-colors">
+                <input 
+                  type="checkbox" 
+                  checked={todo.completed}
+                  onChange={() => toggleTodo(todo.id)}
+                  className="w-5 h-5 text-teal-600 rounded focus:ring-teal-500 border-slate-300"
+                />
+                <span className={`ml-3 text-sm ${todo.completed ? 'text-slate-400 line-through' : 'text-slate-700 font-medium'}`}>
+                  {todo.text}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // --- 미구현 탭의 플레이스홀더 ---
+  const PlaceholderView = ({ title, icon: Icon }) => (
+    <div className="flex flex-col items-center justify-center h-full min-h-[400px] bg-white rounded-xl border border-dashed border-slate-300 animate-fadeIn text-center p-6">
+      <Icon size={48} className="text-slate-300 mb-4" />
+      <h2 className="text-xl font-bold text-slate-700 mb-2">{title} 탭</h2>
+      <p className="text-slate-500 max-w-md">
+        이곳에 {title} 관련 기능(데이터 표, 폼, 파일 업로드 등)이 추가될 예정입니다.<br/>
+        다음 요청에서 이 페이지의 상세 구성을 알려주세요!
+      </p>
+    </div>
+  );
+
+  // 메인 콘텐츠 렌더링 함수
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard': return <DashboardView />;
+      case 'sales': return <PlaceholderView title="영업 관리" icon={TrendingUp} />;
+      case 'bids': return <PlaceholderView title="입찰 리스트" icon={FileText} />;
+      case 'team': return <PlaceholderView title="팀 진척도" icon={Users} />;
+      case 'files': return <PlaceholderView title="파일 저장소" icon={Archive} />;
+      case 'checklist': return <PlaceholderView title="상세 체크리스트" icon={CheckSquare} />;
+      default: return <DashboardView />;
+    }
+  };
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
-      {/* Sidebar */}
-      <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} bg-slate-900 text-white transition-all duration-300 flex flex-col`}>
-        <div className="p-6 flex items-center gap-3 border-b border-slate-800">
-          <FlaskConical className="text-cyan-400 w-8 h-8" />
-          {isSidebarOpen && <span className="text-xl font-bold tracking-tight">태준 실험실</span>}
+    <div className="flex h-screen bg-slate-50 font-sans">
+      
+      {/* 데스크탑 사이드바 */}
+      <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200">
+        <div className="p-6 flex items-center space-x-3">
+          <div className="bg-teal-600 text-white p-2 rounded-lg shadow-sm">
+            <FlaskConical size={24} />
+          </div>
+          <h1 className="text-xl font-bold text-slate-800 tracking-tight">태준실험실</h1>
         </div>
-        
-        <nav className="flex-1 mt-6 px-3 space-y-2">
-          <NavItem 
-            icon={<LayoutDashboard size={20} />} 
-            label="대시보드" 
-            active={activeTab === 'dashboard'} 
-            collapsed={!isSidebarOpen} 
-            onClick={() => setActiveTab('dashboard')} 
-          />
-          <NavItem 
-            icon={<Briefcase size={20} />} 
-            label="영업 관리" 
-            active={activeTab === 'sales'} 
-            collapsed={!isSidebarOpen} 
-            onClick={() => setActiveTab('sales')} 
-          />
-          <NavItem 
-            icon={<FileText size={20} />} 
-            label="입찰 리스트" 
-            active={activeTab === 'bids'} 
-            collapsed={!isSidebarOpen} 
-            onClick={() => setActiveTab('bids')} 
-          />
-          <NavItem 
-            icon={<Users size={20} />} 
-            label="팀원 진척도" 
-            active={activeTab === 'team'} 
-            collapsed={!isSidebarOpen} 
-            onClick={() => setActiveTab('team')} 
-          />
-          <NavItem 
-            icon={<HardDrive size={20} />} 
-            label="구글 드라이브" 
-            active={activeTab === 'gdrive'} 
-            collapsed={!isSidebarOpen} 
-            onClick={() => setActiveTab('gdrive')} 
-          />
+        <nav className="flex-1 px-4 space-y-1 mt-4 overflow-y-auto">
+          {navigation.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleTabChange(item.id)}
+                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors duration-150 ${
+                  isActive 
+                    ? 'bg-teal-50 text-teal-700' 
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                <Icon size={20} className={`mr-3 ${isActive ? 'text-teal-700' : 'text-slate-400'}`} />
+                {item.name}
+              </button>
+            );
+          })}
         </nav>
-
-        <div className="p-4 border-t border-slate-800">
-          <NavItem 
-            icon={<Settings size={20} />} 
-            label="설정" 
-            active={activeTab === 'settings'} 
-            collapsed={!isSidebarOpen} 
-            onClick={() => setActiveTab('settings')} 
-          />
+        <div className="p-4 border-t border-slate-200">
+          <div className="flex items-center space-x-3 px-4 py-2">
+            <div className="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center text-teal-700 font-bold">
+              TJ
+            </div>
+            <div className="text-sm font-medium text-slate-700">수석 연구원</div>
+          </div>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col overflow-hidden relative">
-        {/* Background Grid Pattern (Lab theme) */}
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
+      {/* 모바일 오버레이 메뉴 */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          <div className="fixed inset-0 bg-slate-800/50" onClick={() => setIsMobileMenuOpen(false)}></div>
+          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-white animate-slideInLeft">
+            <div className="p-6 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="bg-teal-600 text-white p-2 rounded-lg">
+                  <FlaskConical size={24} />
+                </div>
+                <h1 className="text-xl font-bold text-slate-800">태준실험실</h1>
+              </div>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="text-slate-500 hover:text-slate-700">
+                <X size={24} />
+              </button>
+            </div>
+            <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+              {navigation.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleTabChange(item.id)}
+                    className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg ${
+                      isActive ? 'bg-teal-50 text-teal-700' : 'text-slate-600'
+                    }`}
+                  >
+                    <Icon size={20} className="mr-3" />
+                    {item.name}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
+      )}
 
-        {/* Top Header */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 z-10">
-          <div className="flex-1 max-w-2xl relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="실험 기록 및 문서 AI 검색..." 
-              className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-lg focus:ring-2 focus:ring-cyan-500 transition-all outline-none"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 bg-white px-2 py-0.5 rounded text-[10px] font-bold text-slate-400 border border-slate-200">AI SEARCH</div>
+      {/* 메인 콘텐츠 영역 */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* 상단 헤더 */}
+        <header className="bg-white border-b border-slate-200 p-4 flex items-center justify-between lg:px-8">
+          <div className="flex items-center">
+            <button 
+              className="md:hidden p-2 -ml-2 mr-2 text-slate-500 hover:text-slate-700 rounded-md hover:bg-slate-100"
+              onClick={() => setIsMobileMenuOpen(true)}
+            >
+              <Menu size={24} />
+            </button>
+            <h2 className="text-2xl font-bold text-slate-800 hidden sm:block">
+              {navigation.find(n => n.id === activeTab)?.name}
+            </h2>
           </div>
           
-          <div className="flex items-center gap-4 ml-4">
-            <button className="p-2 text-slate-500 hover:bg-slate-100 rounded-full relative">
+          <div className="flex items-center space-x-4">
+            <div className="relative hidden sm:block">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="검색..." 
+                className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white w-64 transition-all"
+              />
+            </div>
+            <button className="p-2 text-slate-400 hover:text-slate-600 relative">
               <Bell size={20} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
             </button>
-            <div className="w-8 h-8 bg-cyan-600 rounded-full flex items-center justify-center text-white font-bold text-sm">TJ</div>
           </div>
         </header>
 
-        {/* Dynamic Content Area */}
-        <div className="flex-1 overflow-y-auto p-8 z-10">
-          <div className="max-w-6xl mx-auto">
-            <div className="mb-8">
-              <h1 className="text-2xl font-bold text-slate-800">종합 업무 실험실 현황</h1>
-              <p className="text-slate-500">모든 비즈니스 프로세스와 실험 데이터를 한곳에서 관리합니다.</p>
-            </div>
-
-            {/* Top Cards Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <StatCard title="진행중인 영업" value="12건" icon={<Briefcase className="text-blue-500" />} trend="+2 이번주" />
-              <StatCard title="미결 입찰" value="5건" icon={<FileText className="text-orange-500" />} trend="마감임박 2" />
-              <StatCard title="팀 평균 진척도" value="72%" icon={<Users className="text-green-500" />} trend="최근 상승중" />
-              <StatCard title="업로드 파일" value="128개" icon={<Upload className="text-purple-500" />} trend="오늘 12개" />
-            </div>
-
-            {/* Main Sections Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              
-              {/* Team Progress Section */}
-              <section className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                  <h3 className="font-bold flex items-center gap-2"><Users size={18} /> 팀원별 실험 진척도</h3>
-                  <button className="text-xs text-cyan-600 font-medium hover:underline">상세보기</button>
-                </div>
-                <div className="p-5 space-y-6">
-                  {teamProgress.map((member, idx) => (
-                    <div key={idx} className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium text-slate-700">{member.name} <span className="text-slate-400 font-normal">| {member.task}</span></span>
-                        <span className="text-slate-500">{member.progress}%</span>
-                      </div>
-                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full transition-all duration-1000 ${member.progress === 100 ? 'bg-green-500' : 'bg-cyan-500'}`} 
-                          style={{ width: `${member.progress}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* External Services Connection (Google Drive, Vercel, Samsung Notes) */}
-              <section className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-slate-100 bg-slate-50/50">
-                  <h3 className="font-bold flex items-center gap-2 font-mono">연동 모듈 상태</h3>
-                </div>
-                <div className="p-5 space-y-4">
-                  <ConnectionItem 
-                    name="Google Drive API" 
-                    status="Connected" 
-                    icon={<HardDrive size={18} className="text-blue-500" />} 
-                  />
-                  <ConnectionItem 
-                    name="Vercel Hosting" 
-                    status="Live" 
-                    icon={<ExternalLink size={18} className="text-black" />} 
-                  />
-                  <ConnectionItem 
-                    name="Samsung Notes" 
-                    status="Ready" 
-                    icon={<StickyNote size={18} className="text-orange-500" />} 
-                  />
-                  <div className="pt-4 mt-4 border-t border-slate-100">
-                    <button className="w-full py-2 bg-slate-900 text-white rounded-lg flex items-center justify-center gap-2 text-sm font-medium hover:bg-slate-800 transition-colors">
-                      <Plus size={16} /> 새로운 모듈 추가
-                    </button>
-                  </div>
-                </div>
-              </section>
-
-              {/* Bidding List Section */}
-              <section className="lg:col-span-3 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                  <h3 className="font-bold flex items-center gap-2"><FileText size={18} /> 현재 입찰 리스트</h3>
-                  <button className="text-xs bg-slate-200 px-3 py-1 rounded-full text-slate-600 hover:bg-slate-300">목록 편집</button>
-                </div>
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50 text-slate-500 text-xs uppercase font-semibold">
-                      <th className="px-6 py-4">사업명</th>
-                      <th className="px-6 py-4">마감일</th>
-                      <th className="px-6 py-4">예산 규모</th>
-                      <th className="px-6 py-4">중요도</th>
-                      <th className="px-6 py-4">상태</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {bidList.map((bid, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4 font-medium text-slate-800">{bid.title}</td>
-                        <td className="px-6 py-4 text-slate-600 text-sm">{bid.dueDate}</td>
-                        <td className="px-6 py-4 text-slate-600 text-sm font-mono">{bid.budget}</td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2 py-1 rounded text-[10px] font-bold ${bid.importance === '상' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
-                            {bid.importance}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-1 text-xs text-orange-500 font-medium">
-                            <Clock size={14} /> 제안서 작성중
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </section>
-            </div>
-          </div>
+        {/* 탭 내용 스크롤 영역 */}
+        <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
+          {renderContent()}
         </div>
-
-        {/* Floating Action Button (File Upload) */}
-        <button className="absolute bottom-8 right-8 w-14 h-14 bg-cyan-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-cyan-700 transition-all hover:scale-110 active:scale-95 group">
-          <Upload size={24} />
-          <span className="absolute right-16 bg-slate-800 text-white text-xs px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">문서/실험 결과 업로드</span>
-        </button>
       </main>
+
+      {/* Tailwind CSS를 위한 간단한 인라인 스타일 (애니메이션) */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideInLeft {
+          from { transform: translateX(-100%); }
+          to { transform: translateX(0); }
+        }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }
+        .animate-slideInLeft { animation: slideInLeft 0.3s ease-out forwards; }
+      `}} />
     </div>
   );
-};
-
-// Sub-components
-const NavItem = ({ icon, label, active, collapsed, onClick }) => (
-  <button 
-    onClick={onClick}
-    className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg transition-all ${
-      active ? 'bg-cyan-600 text-white shadow-md shadow-cyan-900/20' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-    }`}
-  >
-    {icon}
-    {!collapsed && <span className="font-medium">{label}</span>}
-  </button>
-);
-
-const StatCard = ({ title, value, icon, trend }) => (
-  <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-    <div className="flex justify-between items-start mb-4">
-      <div className="p-2 bg-slate-50 rounded-lg">{icon}</div>
-      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{title}</span>
-    </div>
-    <div className="text-2xl font-bold text-slate-900 mb-1">{value}</div>
-    <div className="text-xs text-slate-500">{trend}</div>
-  </div>
-);
-
-const ConnectionItem = ({ name, status, icon }) => (
-  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 hover:border-slate-200 transition-all">
-    <div className="flex items-center gap-3">
-      {icon}
-      <span className="text-sm font-medium text-slate-700">{name}</span>
-    </div>
-    <div className="flex items-center gap-1.5">
-      <div className="w-2 h-2 rounded-full bg-green-500"></div>
-      <span className="text-[11px] font-bold text-slate-500 uppercase">{status}</span>
-    </div>
-  </div>
-);
-
-export default App;
+}

@@ -3,106 +3,211 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>태준실험실 - 업무 통합 대시보드</title>
+  <title>태준실험실 - 업무 통합 대시보드 (Google Drive)</title>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Babel (브라우저에서 React JSX를 읽을 수 있게 해줌) -->
+  <!-- Babel -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   
-  <!-- ES Modules Import Map (React, 아이콘, Firebase 라이브러리 불러오기) -->
+  <!-- Google API (Drive 연동을 위한 공식 스크립트) -->
+  <script async defer src="https://apis.google.com/js/api.js"></script>
+  <script async defer src="https://accounts.google.com/gsi/client"></script>
+  
   <script type="importmap">
     {
       "imports": {
         "react": "https://esm.sh/react@18.2.0",
         "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-        "lucide-react": "https://esm.sh/lucide-react@0.294.0",
-        "firebase/app": "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js",
-        "firebase/auth": "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js",
-        "firebase/firestore": "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"
+        "lucide-react": "https://esm.sh/lucide-react@0.294.0"
       }
     }
   </script>
 
   <style>
-    /* 기본 애니메이션 */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes slideInLeft {
-      from { transform: translateX(-100%); }
-      to { transform: translateX(0); }
-    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
     .animate-fadeIn { animation: fadeIn 0.3s ease-out forwards; }
     .animate-slideInLeft { animation: slideInLeft 0.3s ease-out forwards; }
-    
-    /* 텍스트 입력창 포커스 아웃라인 제거 */
     input:focus { outline: none; }
   </style>
 </head>
 <body>
-  <!-- React 앱이 그려질 위치 -->
   <div id="root"></div>
 
-  <!-- React 메인 로직 -->
   <script type="text/babel" data-type="module">
     import React, { useState, useEffect, useRef, useCallback } from 'react';
     import { createRoot } from 'react-dom/client';
     import { 
       Microscope, FlaskConical, FileText, Users, Archive, CheckSquare, 
       Menu, X, Bell, Search, TrendingUp, Clock, AlertCircle, 
-      Plus, MoreHorizontal, ChevronRight
+      Plus, MoreHorizontal, ChevronRight, Cloud, CloudOff, RefreshCw
     } from 'lucide-react';
-    import { initializeApp } from 'firebase/app';
-    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-    import { getFirestore, collection, doc, onSnapshot, updateDoc, addDoc } from 'firebase/firestore';
 
-    // --- Firebase 초기화 (깃허브 연동을 위해 예외처리 추가) ---
-    const firebaseConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
-    let app, auth, db;
-    try {
-      const config = JSON.parse(firebaseConfigStr);
-      if (Object.keys(config).length > 0) {
-        app = initializeApp(config);
-        auth = getAuth(app);
-        db = getFirestore(app);
-      }
-    } catch (e) {
-      console.log("Firebase가 아직 연결되지 않았습니다. 임시 메모리 모드로 작동합니다.");
-    }
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'personal-dashboard';
+    // =====================================================================
+    // 👇👇 [여기에 발급받은 키를 입력하세요] 👇👇
+    // =====================================================================
+    const GOOGLE_CLIENT_ID = "여기에_클라이언트_ID를_붙여넣으세요"; 
+    const GOOGLE_API_KEY = "여기에_API_키를_붙여넣으세요";
+    // =====================================================================
+
+    const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
+    const SCOPES = 'https://www.googleapis.com/auth/drive.file'; // 앱이 만든 파일만 접근하는 권한
+    const DRIVE_FILE_NAME = "taejun_workspace_data.json";
 
     function App() {
-      const [user, setUser] = useState(null);
       const [activeTab, setActiveTab] = useState('checklist');
       const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-      const [isLoading, setIsLoading] = useState(false); // 깃허브를 위해 로딩 기본 false
+      616527196791-gnisfc0coimun5gv2i2uukh7mn1ll22o.apps.googleusercontent.com
+      // --- Google Drive 연동 상태 ---
+      const [gapiLoaded, setGapiLoaded] = useState(false);
+      const [isDriveConnected, setIsDriveConnected] = useState(false);
+      const [isSyncing, setIsSyncing] = useState(false);
+      const driveFileIdRef = useRef(null);
+      const tokenClientRef = useRef(null);
 
-      const [stats] = useState({ salesTarget: 75, activeBids: 3, teamTasks: 12, pendingFiles: 5 });
-
-      useEffect(() => {
-        if (!auth) return;
-        const initAuth = async () => {
-          try {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-              await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-              await signInAnonymously(auth);
-            }
-          } catch (error) {
-            console.error("인증 실패:", error);
-          }
+      // --- 데이터 상태 (App 레벨에서 관리) ---
+      const [weeks, setWeeks] = useState(() => {
+        const stored = localStorage.getItem('workspace_weeks');
+        return stored ? JSON.parse(stored) : [{ id: 'temp-1', title: '이번 주 진행사항', createdAt: Date.now() }];
+      });
+      const [blocksData, setBlocksData] = useState(() => {
+        const stored = localStorage.getItem('workspace_blocks');
+        return stored ? JSON.parse(stored) : {
+          'temp-1': [
+            { id: crypto.randomUUID(), type: 'h1', text: '구글 드라이브 연동 준비 완료!', completed: false },
+            { id: crypto.randomUUID(), type: 'todo', text: '우측 상단의 구름 버튼을 눌러 로그인하세요.', completed: false },
+          ]
         };
-        initAuth();
+      });
 
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-          setUser(currentUser);
-        });
-        return () => unsubscribe();
+      // 구글 API 스크립트 로드 확인
+      useEffect(() => {
+        const checkScripts = setInterval(() => {
+          if (window.gapi && window.google) {
+            clearInterval(checkScripts);
+            // GAPI 초기화
+            window.gapi.load('client', async () => {
+              try {
+                if(GOOGLE_API_KEY && GOOGLE_API_KEY !== "여기에_API_키를_붙여넣으세요"){
+                  await window.gapi.client.init({
+                    apiKey: GOOGLE_API_KEY,
+                    discoveryDocs: [DISCOVERY_DOC],
+                  });
+                  setGapiLoaded(true);
+                }
+              } catch (e) { console.error("GAPI 초기화 에러:", e); }
+            });
+            // GIS (토큰 클라이언트) 초기화
+            if(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== "여기에_클라이언트_ID를_붙여넣으세요"){
+              tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
+                client_id: GOOGLE_CLIENT_ID,
+                scope: SCOPES,
+                callback: async (resp) => {
+                  if (resp.error !== undefined) { throw (resp); }
+                  setIsDriveConnected(true);
+                  await downloadDataFromDrive();
+                },
+              });
+            }
+          }
+        }, 500);
+        return () => clearInterval(checkScripts);
       }, []);
 
+      // 로컬 스토리지 상시 백업
+      useEffect(() => {
+        localStorage.setItem('workspace_weeks', JSON.stringify(weeks));
+        localStorage.setItem('workspace_blocks', JSON.stringify(blocksData));
+      }, [weeks, blocksData]);
+
+      // 데이터가 변경될 때마다 구글 드라이브로 자동 저장 (디바운스 처리)
+      useEffect(() => {
+        if (!isDriveConnected || !driveFileIdRef.current) return;
+        setIsSyncing(true);
+        const timer = setTimeout(() => {
+          uploadDataToDrive(weeks, blocksData);
+        }, 3000); // 3초간 입력이 없으면 드라이브로 전송
+        return () => clearTimeout(timer);
+      }, [weeks, blocksData, isDriveConnected]);
+
+      const handleDriveConnectClick = () => {
+        if (!gapiLoaded || !tokenClientRef.current) {
+          alert("구글 API 키와 클라이언트 ID를 코드에 입력하셨는지 확인해주세요!");
+          return;
+        }
+        if (window.gapi.client.getToken() === null) {
+          // 토큰 요청 팝업 띄우기
+          tokenClientRef.current.requestAccessToken({prompt: 'consent'});
+        } else {
+          // 이미 토큰이 있으면 즉시 다운로드
+          setIsDriveConnected(true);
+          downloadDataFromDrive();
+        }
+      };
+
+      // 드라이브에서 파일 찾기 및 불러오기
+      const downloadDataFromDrive = async () => {
+        setIsSyncing(true);
+        try {
+          const response = await window.gapi.client.drive.files.list({
+            q: `name='${DRIVE_FILE_NAME}' and trashed=false`,
+            fields: 'files(id, name)',
+            spaces: 'drive',
+          });
+          const files = response.result.files;
+          
+          if (files && files.length > 0) {
+            driveFileIdRef.current = files[0].id;
+            // 파일 내용 다운로드
+            const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${files[0].id}?alt=media`, {
+              headers: { 'Authorization': `Bearer ${window.gapi.client.getToken().access_token}` }
+            });
+            const data = await fileRes.json();
+            if (data.weeks && data.blocksData) {
+              setWeeks(data.weeks);
+              setBlocksData(data.blocksData);
+            }
+          } else {
+            // 파일이 없으면 새로 생성
+            const createRes = await window.gapi.client.drive.files.create({
+              resource: { name: DRIVE_FILE_NAME, mimeType: 'application/json' },
+              fields: 'id'
+            });
+            driveFileIdRef.current = createRes.result.id;
+            await uploadDataToDrive(weeks, blocksData); // 현재 로컬 데이터를 업로드
+          }
+        } catch (err) {
+          console.error("드라이브 파일 로드 실패:", err);
+          alert("파일을 불러오는데 실패했습니다. 팝업 차단을 해제해주세요.");
+        } finally {
+          setIsSyncing(false);
+        }
+      };
+
+      // 드라이브로 파일 덮어쓰기 (저장)
+      const uploadDataToDrive = async (currentWeeks, currentBlocks) => {
+        if (!driveFileIdRef.current) return;
+        const uploadData = { weeks: currentWeeks, blocksData: currentBlocks };
+        try {
+          await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileIdRef.current}?uploadType=media`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${window.gapi.client.getToken().access_token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(uploadData)
+          });
+          console.log("구글 드라이브 동기화 완료");
+        } catch (e) {
+          console.error("구글 드라이브 저장 실패", e);
+        } finally {
+          setIsSyncing(false);
+        }
+      };
+
+      // --- 네비게이션 및 컴포넌트들 ---
       const navigation = [
         { id: 'dashboard', name: '대시보드', icon: Microscope },
         { id: 'sales', name: '영업 관리', icon: TrendingUp },
@@ -117,114 +222,39 @@
         setIsMobileMenuOpen(false);
       };
 
-      // --- 체크리스트 컴포넌트 ---
+      // --- 체크리스트 컴포넌트 뷰 ---
       const ChecklistView = () => {
-        const [weeks, setWeeks] = useState([]);
-        const [activeWeekId, setActiveWeekId] = useState(null);
-        const [blocks, setBlocks] = useState([]);
-        const [weekTitle, setWeekTitle] = useState("");
+        const [activeWeekId, setActiveWeekId] = useState(weeks.length > 0 ? weeks[0].id : null);
         const inputRefs = useRef({});
 
-        // --- 브라우저 저장소(localStorage) 연동 로직 추가 ---
-        const getInitialWeeks = () => {
-          const stored = localStorage.getItem('workspace_weeks');
-          return stored ? JSON.parse(stored) : [{ id: 'temp-1', title: '이번 주 진행사항', createdAt: Date.now() }];
-        };
-        const getInitialBlocks = () => {
-          const stored = localStorage.getItem('workspace_blocks');
-          return stored ? JSON.parse(stored) : {
-            'temp-1': [
-              { id: crypto.randomUUID(), type: 'h1', text: '브라우저 저장소 연동 완료!', completed: false },
-              { id: crypto.randomUUID(), type: 'todo', text: '이제 브라우저에 내용이 자동 저장됩니다.', completed: true },
-              { id: crypto.randomUUID(), type: 'todo', text: '새로고침을 해도 데이터가 날아가지 않아요.', completed: false },
-              { id: crypto.randomUUID(), type: 'text', text: '단축키 "[] " 를 입력하면 체크박스가 생성됩니다.', completed: false }
-            ]
-          };
+        const activeBlocks = activeWeekId && blocksData[activeWeekId] 
+            ? blocksData[activeWeekId] 
+            : [{ id: crypto.randomUUID(), type: 'text', text: '', completed: false }];
+            
+        const activeWeekTitle = activeWeekId ? (weeks.find(w => w.id === activeWeekId)?.title || "제목 없음") : "";
+
+        const updateActiveBlocks = (newBlocks) => {
+          setBlocksData(prev => ({ ...prev, [activeWeekId]: newBlocks }));
         };
 
-        const [localWeeks, setLocalWeeks] = useState(getInitialWeeks);
-        const [localBlocks, setLocalBlocks] = useState(getInitialBlocks);
-
-        // 변경사항이 생길 때마다 브라우저 저장소(localStorage)에 저장
-        useEffect(() => {
-          if (!db) {
-            localStorage.setItem('workspace_weeks', JSON.stringify(localWeeks));
-            localStorage.setItem('workspace_blocks', JSON.stringify(localBlocks));
-          }
-        }, [localWeeks, localBlocks, db]);
-
-        // 데이터 로드
-        useEffect(() => {
-          if (db && user) {
-            const weeksRef = collection(db, 'artifacts', appId, 'users', user.uid, 'checklist_weeks');
-            const unsubscribe = onSnapshot(weeksRef, (snapshot) => {
-              const weeksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-              weeksData.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-              setWeeks(weeksData);
-              if (weeksData.length > 0 && !activeWeekId) setActiveWeekId(weeksData[0].id);
-            });
-            return () => unsubscribe();
-          } else {
-            setWeeks(localWeeks);
-            if (!activeWeekId && localWeeks.length > 0) setActiveWeekId(localWeeks[0].id);
-          }
-        }, [db, user, activeWeekId, localWeeks]);
-
-        // 상세 블록 로드
-        useEffect(() => {
-          if (!activeWeekId) return;
-          if (db && user) {
-            const weekDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'checklist_weeks', activeWeekId);
-            const unsubscribe = onSnapshot(weekDocRef, (docSnap) => {
-              if (docSnap.exists()) {
-                const data = docSnap.data();
-                setWeekTitle(data.title || "제목 없음");
-                setBlocks(data.blocks && data.blocks.length > 0 ? data.blocks : [{ id: crypto.randomUUID(), type: 'text', text: '', completed: false }]);
-              }
-            });
-            return () => unsubscribe();
-          } else {
-            const currentWeek = localWeeks.find(w => w.id === activeWeekId);
-            setWeekTitle(currentWeek?.title || "제목 없음");
-            setBlocks(localBlocks[activeWeekId] || [{ id: crypto.randomUUID(), type: 'text', text: '', completed: false }]);
-          }
-          // 주의: 타이핑 중 포커스 유실 방지를 위해 localBlocks 제외
-        }, [db, user, activeWeekId]);
-
-        // 데이터 저장
-        const saveBlocksToFirebase = useCallback(async (newBlocks, newTitle = weekTitle) => {
-          if (db && user && activeWeekId) {
-            try {
-              const weekDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'checklist_weeks', activeWeekId);
-              await updateDoc(weekDocRef, { title: newTitle, blocks: newBlocks, updatedAt: Date.now() });
-            } catch (error) { console.error("저장 실패:", error); }
-          } else if (activeWeekId) {
-            setLocalBlocks(prev => ({ ...prev, [activeWeekId]: newBlocks }));
-            setLocalWeeks(prev => prev.map(w => w.id === activeWeekId ? { ...w, title: newTitle } : w));
-          }
-        }, [db, user, activeWeekId, weekTitle]);
-
-        const handleAddWeek = async () => {
+        const handleAddWeek = () => {
           const today = new Date();
           const newTitle = `${today.getMonth() + 1}월 ${Math.ceil(today.getDate() / 7)}주차`;
+          const newId = crypto.randomUUID();
           const initBlock = [{ id: crypto.randomUUID(), type: 'text', text: '', completed: false }];
           
-          if (db && user) {
-            try {
-              const weeksRef = collection(db, 'artifacts', appId, 'users', user.uid, 'checklist_weeks');
-              const docRef = await addDoc(weeksRef, { title: newTitle, blocks: initBlock, createdAt: Date.now(), updatedAt: Date.now() });
-              setActiveWeekId(docRef.id);
-            } catch (error) {}
-          } else {
-            const newId = crypto.randomUUID();
-            setLocalWeeks([{ id: newId, title: newTitle, createdAt: Date.now() }, ...localWeeks]);
-            setLocalBlocks({ ...localBlocks, [newId]: initBlock });
-            setActiveWeekId(newId);
-          }
+          setWeeks([{ id: newId, title: newTitle, createdAt: Date.now() }, ...weeks]);
+          setBlocksData({ ...blocksData, [newId]: initBlock });
+          setActiveWeekId(newId);
+        };
+
+        const handleTitleChange = (e) => {
+          const newTitle = e.target.value;
+          setWeeks(prev => prev.map(w => w.id === activeWeekId ? { ...w, title: newTitle } : w));
         };
 
         const handleBlockChange = (index, id, newText) => {
-          const newBlocks = [...blocks];
+          const newBlocks = [...activeBlocks];
           let currentBlock = { ...newBlocks[index] };
 
           if (currentBlock.type === 'text') {
@@ -237,46 +267,42 @@
           } else { currentBlock.text = newText; }
 
           newBlocks[index] = currentBlock;
-          setBlocks(newBlocks);
+          updateActiveBlocks(newBlocks);
         };
 
         const handleKeyDown = (e, index, id) => {
           if (e.key === 'Enter') {
             e.preventDefault();
-            const newBlocks = [...blocks];
+            const newBlocks = [...activeBlocks];
             const newId = crypto.randomUUID();
             const nextType = newBlocks[index].type === 'todo' ? 'todo' : 'text';
             newBlocks.splice(index + 1, 0, { id: newId, type: nextType, text: '', completed: false });
-            setBlocks(newBlocks);
-            saveBlocksToFirebase(newBlocks);
+            updateActiveBlocks(newBlocks);
             setTimeout(() => { if (inputRefs.current[newId]) inputRefs.current[newId].focus(); }, 50);
           } 
-          else if (e.key === 'Backspace' && blocks[index].text === '') {
-            if (blocks[index].type !== 'text') {
+          else if (e.key === 'Backspace' && activeBlocks[index].text === '') {
+            if (activeBlocks[index].type !== 'text') {
               e.preventDefault();
-              const newBlocks = [...blocks];
+              const newBlocks = [...activeBlocks];
               newBlocks[index].type = 'text';
-              setBlocks(newBlocks);
-              saveBlocksToFirebase(newBlocks);
-            } else if (blocks.length > 1) {
+              updateActiveBlocks(newBlocks);
+            } else if (activeBlocks.length > 1) {
               e.preventDefault();
-              const newBlocks = [...blocks];
+              const newBlocks = [...activeBlocks];
               newBlocks.splice(index, 1);
-              setBlocks(newBlocks);
-              saveBlocksToFirebase(newBlocks);
+              updateActiveBlocks(newBlocks);
               const prevId = newBlocks[index - 1] ? newBlocks[index - 1].id : newBlocks[0].id;
               setTimeout(() => { if (inputRefs.current[prevId]) inputRefs.current[prevId].focus(); }, 50);
             }
           }
-          else if (e.key === 'ArrowUp' && index > 0) { e.preventDefault(); inputRefs.current[blocks[index - 1].id]?.focus(); }
-          else if (e.key === 'ArrowDown' && index < blocks.length - 1) { e.preventDefault(); inputRefs.current[blocks[index + 1].id]?.focus(); }
+          else if (e.key === 'ArrowUp' && index > 0) { e.preventDefault(); inputRefs.current[activeBlocks[index - 1].id]?.focus(); }
+          else if (e.key === 'ArrowDown' && index < activeBlocks.length - 1) { e.preventDefault(); inputRefs.current[activeBlocks[index + 1].id]?.focus(); }
         };
 
         const toggleTodoCompleted = (index) => {
-          const newBlocks = [...blocks];
+          const newBlocks = [...activeBlocks];
           newBlocks[index].completed = !newBlocks[index].completed;
-          setBlocks(newBlocks);
-          saveBlocksToFirebase(newBlocks);
+          updateActiveBlocks(newBlocks);
         };
 
         const renderBlockIcon = (block, index) => {
@@ -316,11 +342,11 @@
             <div className="flex-1 overflow-y-auto p-8 lg:px-24 xl:px-32 relative">
               {activeWeekId ? (
                 <div className="max-w-3xl mx-auto pb-32">
-                  <input type="text" value={weekTitle} onChange={(e) => setWeekTitle(e.target.value)} onBlur={() => saveBlocksToFirebase(blocks, weekTitle)}
+                  <input type="text" value={activeWeekTitle} onChange={handleTitleChange} 
                     placeholder="제목 없음" className="w-full text-4xl font-bold text-slate-800 mb-8 border-none bg-transparent placeholder-slate-300" />
                   
                   <div className="space-y-1">
-                    {blocks.map((block, index) => {
+                    {activeBlocks.map((block, index) => {
                       let textStyle = "flex-1 text-slate-700 border-none bg-transparent py-1 w-full";
                       if (block.type === 'h1') textStyle += " text-2xl font-bold mt-4 mb-2";
                       if (block.type === 'todo' && block.completed) textStyle += " text-slate-400 line-through";
@@ -334,7 +360,6 @@
                           <input ref={el => inputRefs.current[block.id] = el} type="text" value={block.text}
                             onChange={(e) => handleBlockChange(index, block.id, e.target.value)}
                             onKeyDown={(e) => handleKeyDown(e, index, block.id)}
-                            onBlur={() => saveBlocksToFirebase(blocks)}
                             placeholder={block.type === 'text' ? "명령어를 사용하려면 '[] ', '- ', '# ' 등을 입력하세요" : ""}
                             className={textStyle} style={{ minHeight: '24px' }} />
                         </div>
@@ -353,73 +378,15 @@
         );
       };
 
-      const DashboardView = () => (
-        <div className="space-y-6 animate-fadeIn">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-4">
-              <div className="p-3 bg-teal-50 text-teal-600 rounded-lg"><TrendingUp size={24} /></div>
-              <div><p className="text-sm text-slate-500 font-medium">영업 목표 달성률</p><p className="text-2xl font-bold text-slate-800">{stats.salesTarget}%</p></div>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-4">
-              <div className="p-3 bg-cyan-50 text-cyan-600 rounded-lg"><FileText size={24} /></div>
-              <div><p className="text-sm text-slate-500 font-medium">진행중인 입찰</p><p className="text-2xl font-bold text-slate-800">{stats.activeBids}건</p></div>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-4">
-              <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg"><Users size={24} /></div>
-              <div><p className="text-sm text-slate-500 font-medium">팀 할당 업무</p><p className="text-2xl font-bold text-slate-800">{stats.teamTasks}개</p></div>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center space-x-4">
-              <div className="p-3 bg-amber-50 text-amber-600 rounded-lg"><Archive size={24} /></div>
-              <div><p className="text-sm text-slate-500 font-medium">검토 대기 파일</p><p className="text-2xl font-bold text-slate-800">{stats.pendingFiles}개</p></div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-slate-800">최근 진행 현황</h3>
-                <button className="text-sm text-teal-600 hover:text-teal-800" onClick={() => handleTabChange('bids')}>전체보기</button>
-              </div>
-              <div className="space-y-4">
-                <div className="flex items-center p-3 hover:bg-slate-50 rounded-lg transition-colors">
-                  <Clock className="text-slate-400 mr-3" size={20} />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-slate-800">B공공기관 구축 사업 입찰</p>
-                    <p className="text-xs text-slate-500">제안서 작성 중 (마감 D-3)</p>
-                  </div>
-                  <span className="px-2 py-1 bg-amber-100 text-amber-800 text-xs rounded-full font-medium">진행중</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-
-      const PlaceholderView = ({ title, icon: Icon }) => (
-        <div className="flex flex-col items-center justify-center h-full min-h-[400px] bg-white rounded-xl border border-dashed border-slate-300 animate-fadeIn text-center p-6">
-          <Icon size={48} className="text-slate-300 mb-4" />
-          <h2 className="text-xl font-bold text-slate-700 mb-2">{title} 탭</h2>
-          <p className="text-slate-500 max-w-md">이곳에 {title} 관련 기능이 추가될 예정입니다.<br/>다음 요청에서 상세 구성을 알려주세요!</p>
-        </div>
-      );
-
       const renderContent = () => {
         switch (activeTab) {
-          case 'dashboard': return <DashboardView />;
-          case 'sales': return <PlaceholderView title="영업 관리" icon={TrendingUp} />;
-          case 'bids': return <PlaceholderView title="입찰 리스트" icon={FileText} />;
-          case 'team': return <PlaceholderView title="팀 진척도" icon={Users} />;
-          case 'files': return <PlaceholderView title="파일 저장소" icon={Archive} />;
           case 'checklist': return <ChecklistView />;
-          default: return <DashboardView />;
+          default: return <div className="flex flex-col items-center justify-center h-full text-slate-400">이 탭은 준비중입니다.</div>;
         }
       };
 
-      if (isLoading) return <div className="flex items-center justify-center h-screen bg-slate-50 text-slate-500">데이터를 불러오는 중입니다...</div>;
-
       return (
         <div className="flex h-screen bg-slate-50 font-sans">
-          {/* 사이드바 */}
           <aside className="hidden md:flex flex-col w-64 bg-white border-r border-slate-200">
             <div className="p-6 flex items-center space-x-3">
               <div className="bg-teal-600 text-white p-2 rounded-lg shadow-sm"><FlaskConical size={24} /></div>
@@ -440,17 +407,29 @@
             </nav>
           </aside>
 
-          {/* 메인 영역 */}
           <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
             <header className="bg-white border-b border-slate-200 p-4 flex items-center justify-between lg:px-8">
               <div className="flex items-center">
+                <button className="md:hidden p-2 -ml-2 mr-2 text-slate-500 hover:text-slate-700 rounded-md hover:bg-slate-100" onClick={() => setIsMobileMenuOpen(true)}>
+                  <Menu size={24} />
+                </button>
                 <h2 className="text-2xl font-bold text-slate-800 hidden sm:block">{navigation.find(n => n.id === activeTab)?.name}</h2>
               </div>
+              
               <div className="flex items-center space-x-4">
-                <div className="relative hidden sm:block">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={18} />
-                  <input type="text" placeholder="검색..." className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-full text-sm focus:ring-2 focus:ring-teal-500 w-64" />
-                </div>
+                {/* 구글 드라이브 동기화 버튼 */}
+                <button 
+                  onClick={handleDriveConnectClick}
+                  className={`flex items-center px-4 py-2 rounded-full text-sm font-medium transition-colors border ${
+                    isDriveConnected 
+                      ? 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100' 
+                      : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  {isSyncing ? <RefreshCw size={18} className="mr-2 animate-spin text-teal-500" /> 
+                    : (isDriveConnected ? <Cloud size={18} className="mr-2 text-teal-600" /> : <CloudOff size={18} className="mr-2" />)}
+                  {isSyncing ? '저장중...' : (isDriveConnected ? '드라이브 동기화됨' : '구글 드라이브 연결')}
+                </button>
               </div>
             </header>
             <div className="flex-1 overflow-hidden p-4 md:p-6 lg:p-8">

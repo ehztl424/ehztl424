@@ -36,6 +36,8 @@
     .bid-table th { white-space: nowrap; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; padding: 12px 16px; background: #f8fafc; }
     .bid-table td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; min-width: 120px; }
     .status-pill { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; display: inline-block; }
+    
+    .notion-item:focus-within { background-color: #f1f5f9; border-radius: 8px; }
   </style>
 </head>
 <body class="bg-[#f8fafc] text-slate-800 antialiased">
@@ -88,10 +90,7 @@
       const [weeklyChecklists, setWeeklyChecklists] = useState([]);
       const [selectedWeekId, setSelectedWeekId] = useState(null);
       
-      // 입찰 시트 데이터
       const [bidData, setBidData] = useState([]);
-      const [isSyncing, setIsSyncing] = useState(false);
-
       const saveTimerRef = useRef(null);
 
       useEffect(() => {
@@ -106,19 +105,16 @@
         if (!user) return;
         const userPath = `artifacts/${appId}/users/${user.uid}`;
         
-        // 자료 보관소 데이터 구독
         const unsubA = db.collection(`${userPath}/archives`).onSnapshot(snap => {
           setArchives(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.createdAt - a.createdAt));
         });
 
-        // 체크리스트 구독
         const unsubC = db.collection(`${userPath}/checklists`).onSnapshot(snap => {
           const list = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.order - a.order);
           setWeeklyChecklists(list);
           if (list.length > 0 && !selectedWeekId) setSelectedWeekId(list[0].id);
         });
 
-        // 입찰 시트 데이터 구독
         const unsubB = db.collection(`${userPath}/bids`).onSnapshot(snap => {
           const bids = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.createdAt - a.createdAt);
           setBidData(bids);
@@ -143,26 +139,14 @@
         if (!user) return;
         const userPath = `artifacts/${appId}/users/${user.uid}`;
         await db.collection(`${userPath}/bids`).add({
-          status: '진행중',
-          category: 'MICE(PCO)',
-          client: '',
-          title: '',
-          budget: 0,
-          entity: '',
-          submitDate: '',
-          dept: '',
-          author: '',
-          bidAmount: 0,
-          ptStatus: '확인 필요',
-          ptDate: '',
-          result: '',
-          createdAt: Date.now()
+          status: '진행중', category: 'MICE(PCO)', client: '', title: '',
+          budget: 0, entity: '', submitDate: '', dept: '', author: '',
+          bidAmount: 0, ptStatus: '확인 필요', ptDate: '', result: '', createdAt: Date.now()
         });
       };
 
       const updateBid = (bidId, field, value) => {
         setBidData(prev => prev.map(item => item.id === bidId ? { ...item, [field]: value } : item));
-        
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(async () => {
           if (!user) return;
@@ -172,24 +156,18 @@
       };
 
       const deleteBid = async (id) => {
-        if (!user || !confirm("이 입찰 데이터를 삭제하시겠습니까?")) return;
-        const userPath = `artifacts/${appId}/users/${user.uid}`;
-        await db.doc(`${userPath}/bids/${id}`).delete();
+        if (!user || !confirm("삭제하시겠습니까?")) return;
+        await db.doc(`artifacts/${appId}/users/${user.uid}/bids/${id}`).delete();
       };
 
-      const formatCurrency = (val) => {
-        if (!val) return "₩ 0";
-        return "₩ " + Number(val).toLocaleString();
-      };
-
-      // --- 체크리스트 동기화 로직 ---
+      // --- 체크리스트 실시간 동기화 및 단축키 로직 ---
       const syncChecklist = useCallback((weekId, items) => {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(async () => {
           if (!user) return;
           const userPath = `artifacts/${appId}/users/${user.uid}`;
           await db.doc(`${userPath}/checklists/${weekId}`).update({ items });
-        }, 1000);
+        }, 800);
       }, [user]);
 
       const handleCheckItemChange = (weekId, index, field, value) => {
@@ -205,22 +183,70 @@
         });
       };
 
+      const handleCheckKeyDown = (e, weekId, index) => {
+        const week = weeklyChecklists.find(w => w.id === weekId);
+        if (!week) return;
+        
+        let newItems = [...week.items];
+        const item = newItems[index];
+
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const newItem = { id: Math.random().toString(36).substr(2, 9), text: '', completed: false, level: item.level, bold: false };
+          newItems.splice(index + 1, 0, newItem);
+          
+          setWeeklyChecklists(prev => {
+            const next = [...prev];
+            const wIdx = next.findIndex(w => w.id === weekId);
+            next[wIdx].items = newItems;
+            return next;
+          });
+          syncChecklist(weekId, newItems);
+          setTimeout(() => document.getElementById(`notion-input-${index + 1}`)?.focus(), 10);
+        } else if (e.key === 'Tab') {
+          e.preventDefault();
+          const newLevel = e.shiftKey ? Math.max(0, item.level - 1) : Math.min(4, item.level + 1);
+          handleCheckItemChange(weekId, index, 'level', newLevel);
+        } else if (e.key === 'Backspace' && item.text === '' && newItems.length > 1) {
+          e.preventDefault();
+          newItems.splice(index, 1);
+          setWeeklyChecklists(prev => {
+            const next = [...prev];
+            const wIdx = next.findIndex(w => w.id === weekId);
+            next[wIdx].items = newItems;
+            return next;
+          });
+          syncChecklist(weekId, newItems);
+          setTimeout(() => document.getElementById(`notion-input-${index - 1}`)?.focus(), 10);
+        } else if (e.ctrlKey && e.key.toLowerCase() === 'b') {
+          e.preventDefault();
+          handleCheckItemChange(weekId, index, 'bold', !item.bold);
+        }
+      };
+
+      const addNewWeek = async () => {
+        const name = prompt("주차 명칭 (예: 5월 1주차)");
+        if (!name) return;
+        await db.collection(`artifacts/${appId}/users/${user.uid}/checklists`).add({
+          title: name, items: [{ id: Date.now().toString(36), text: '', completed: false, level: 0, bold: false }],
+          createdAt: Date.now(), order: Date.now()
+        });
+      };
+
       if (loading) return null;
 
       if (!user) {
         return (
           <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
-            <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl p-10 border border-white">
-              <div className="flex justify-center mb-8">
-                <div className="p-4 bg-blue-600 rounded-2xl shadow-xl shadow-blue-200"><Icons.Beaker size={44} color="white"/></div>
-              </div>
-              <h1 className="text-3xl font-black text-center text-slate-800 mb-1 tracking-tighter uppercase leading-none">Taejun Lab</h1>
-              <p className="text-center text-slate-400 mb-10 text-[10px] font-bold tracking-[0.4em] uppercase">Security Console</p>
-              <form onSubmit={handleLogin} className="space-y-6">
+            <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl p-10 border border-white text-center">
+              <div className="flex justify-center mb-8"><div className="p-4 bg-blue-600 rounded-2xl shadow-xl shadow-blue-200"><Icons.Beaker size={44} color="white"/></div></div>
+              <h1 className="text-3xl font-black text-slate-800 mb-1 uppercase tracking-tighter">Taejun Lab</h1>
+              <p className="text-slate-400 mb-12 text-[10px] font-bold tracking-[0.4em] uppercase">Private Security Console</p>
+              <form onSubmit={handleLogin} className="space-y-6 text-left">
                 <input type="text" value={loginId} onChange={e=>setLoginId(e.target.value)} placeholder="ID" className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold" required />
-                <input type="password" value={loginPw} onChange={e=>setLoginPw(e.target.value)} placeholder="Security Key" className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold" required />
+                <input type="password" value={loginPw} onChange={e=>setLoginPw(e.target.value)} placeholder="PW" className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold" required />
                 {errorMsg && <div className="bg-red-50 text-red-500 text-[11px] text-center font-bold py-3 px-4 rounded-xl animate-shake">{errorMsg}</div>}
-                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-xl shadow-blue-200 text-base active:scale-95 uppercase tracking-widest mt-2">Login</button>
+                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-xl shadow-blue-200 uppercase tracking-widest active:scale-95 transition-all mt-2">Login</button>
               </form>
             </div>
           </div>
@@ -259,102 +285,45 @@
             {activeTab === 'bid_sheet' ? (
               <div className="max-w-[1600px] mx-auto">
                 <div className="flex items-center justify-between mb-10">
-                  <div>
-                    <h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase leading-none">Bidding Sheet</h2>
-                    <p className="text-slate-400 mt-2 font-bold text-sm uppercase tracking-widest">입찰 참여 현황 실시간 관리</p>
-                  </div>
-                  <button onClick={addNewBid} className="bg-blue-600 hover:bg-blue-700 text-white font-black px-6 py-3.5 rounded-2xl shadow-xl shadow-blue-100 flex items-center gap-2 active:scale-95 transition-all">
-                    <Icons.Plus size={18}/> 새 입찰 추가
-                  </button>
+                  <div><h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase leading-none">Bidding Sheet</h2><p className="text-slate-400 mt-2 font-bold text-sm uppercase tracking-widest">입찰 참여 현황 관리</p></div>
+                  <button onClick={addNewBid} className="bg-blue-600 hover:bg-blue-700 text-white font-black px-6 py-3.5 rounded-2xl shadow-xl shadow-blue-100 flex items-center gap-2 active:scale-95 transition-all"><Icons.Plus size={18}/> 새 입찰 추가</button>
                 </div>
-
-                <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/40 border border-slate-50 overflow-hidden">
+                <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-50 overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full bid-table text-left border-collapse">
                       <thead>
                         <tr>
-                          <th>진행상태</th>
-                          <th>사업분야</th>
-                          <th>발주처명</th>
-                          <th>공고명</th>
-                          <th>예산</th>
-                          <th>투찰법인</th>
-                          <th>제출일자</th>
-                          <th>부서</th>
-                          <th>작성자</th>
-                          <th>투찰금액</th>
-                          <th>PT 상태</th>
-                          <th>PT 일시</th>
-                          <th className="text-right">관리</th>
+                          <th>진행상태</th><th>사업분야</th><th>발주처명</th><th>공고명</th><th>예산</th><th>투찰법인</th><th>제출일자</th><th>부서</th><th>작성자</th><th>투찰금액</th><th>PT 상태</th><th>PT 일시</th><th className="text-right">관리</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
                         {bidData.map(bid => (
                           <tr key={bid.id} className="hover:bg-blue-50/30 transition-colors">
                             <td>
-                              <select 
-                                value={bid.status} 
-                                onChange={(e) => updateBid(bid.id, 'status', e.target.value)}
-                                className={`status-pill outline-none appearance-none cursor-pointer ${
-                                  bid.status === '진행중' ? 'bg-green-100 text-green-700' :
-                                  bid.status === '제출완료' ? 'bg-blue-100 text-blue-700' :
-                                  bid.status === '탈락' ? 'bg-red-100 text-red-700' :
-                                  bid.status === '낙찰' ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100 text-slate-600'
-                                }`}
-                              >
-                                <option>진행중</option>
-                                <option>제출완료</option>
-                                <option>탈락</option>
-                                <option>낙찰</option>
-                                <option>검토중</option>
+                              <select value={bid.status} onChange={(e) => updateBid(bid.id, 'status', e.target.value)} className={`status-pill outline-none appearance-none cursor-pointer ${bid.status === '진행중' ? 'bg-green-100 text-green-700' : bid.status === '제출완료' ? 'bg-blue-100 text-blue-700' : bid.status === '탈락' ? 'bg-red-100 text-red-700' : bid.status === '낙찰' ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100 text-slate-600'}`}>
+                                <option>진행중</option><option>제출완료</option><option>탈락</option><option>낙찰</option><option>검토중</option>
                               </select>
                             </td>
-                            <td><input type="text" value={bid.category} onChange={e=>updateBid(bid.id, 'category', e.target.value)} className="bg-transparent w-full focus:bg-white focus:ring-2 focus:ring-blue-100 rounded px-2" /></td>
-                            <td><input type="text" value={bid.client} onChange={e=>updateBid(bid.id, 'client', e.target.value)} className="bg-transparent w-full focus:bg-white focus:ring-2 focus:ring-blue-100 rounded px-2 font-bold" placeholder="발주처 입력" /></td>
-                            <td><input type="text" value={bid.title} onChange={e=>updateBid(bid.id, 'title', e.target.value)} className="bg-transparent w-full focus:bg-white focus:ring-2 focus:ring-blue-100 rounded px-2" placeholder="공고명 입력" /></td>
-                            <td>
-                              <input 
-                                type="number" 
-                                value={bid.budget} 
-                                onChange={e=>updateBid(bid.id, 'budget', e.target.value)} 
-                                className="bg-transparent w-full focus:bg-white focus:ring-2 focus:ring-blue-100 rounded px-2 text-right font-mono" 
-                              />
-                            </td>
-                            <td><input type="text" value={bid.entity} onChange={e=>updateBid(bid.id, 'entity', e.target.value)} className="bg-transparent w-full focus:bg-white focus:ring-2 focus:ring-blue-100 rounded px-2" /></td>
-                            <td><input type="date" value={bid.submitDate} onChange={e=>updateBid(bid.id, 'submitDate', e.target.value)} className="bg-transparent text-xs outline-none" /></td>
+                            <td><input type="text" value={bid.category} onChange={e=>updateBid(bid.id, 'category', e.target.value)} className="bg-transparent w-full rounded px-2" /></td>
+                            <td><input type="text" value={bid.client} onChange={e=>updateBid(bid.id, 'client', e.target.value)} className="bg-transparent w-full rounded px-2 font-bold" /></td>
+                            <td><input type="text" value={bid.title} onChange={e=>updateBid(bid.id, 'title', e.target.value)} className="bg-transparent w-full rounded px-2" /></td>
+                            <td><input type="number" value={bid.budget} onChange={e=>updateBid(bid.id, 'budget', e.target.value)} className="bg-transparent w-full text-right font-mono" /></td>
+                            <td><input type="text" value={bid.entity} onChange={e=>updateBid(bid.id, 'entity', e.target.value)} className="bg-transparent w-full rounded px-2" /></td>
+                            <td><input type="date" value={bid.submitDate} onChange={e=>updateBid(bid.id, 'submitDate', e.target.value)} className="bg-transparent text-xs" /></td>
                             <td><input type="text" value={bid.dept} onChange={e=>updateBid(bid.id, 'dept', e.target.value)} className="bg-transparent w-full" /></td>
                             <td><input type="text" value={bid.author} onChange={e=>updateBid(bid.id, 'author', e.target.value)} className="bg-transparent w-full" /></td>
+                            <td><input type="number" value={bid.bidAmount} onChange={e=>updateBid(bid.id, 'bidAmount', e.target.value)} className="bg-transparent w-full text-right font-mono text-blue-600 font-bold" /></td>
                             <td>
-                              <input 
-                                type="number" 
-                                value={bid.bidAmount} 
-                                onChange={e=>updateBid(bid.id, 'bidAmount', e.target.value)} 
-                                className="bg-transparent w-full focus:bg-white focus:ring-2 focus:ring-blue-100 rounded px-2 text-right font-mono text-blue-600 font-bold" 
-                              />
-                            </td>
-                            <td>
-                              <select 
-                                value={bid.ptStatus} 
-                                onChange={(e) => updateBid(bid.id, 'ptStatus', e.target.value)}
-                                className="text-[11px] font-bold outline-none bg-transparent"
-                              >
-                                <option>확인 필요</option>
-                                <option>발표없음(서면)</option>
-                                <option>대면(방문)</option>
-                                <option>일정미정</option>
+                              <select value={bid.ptStatus} onChange={(e) => updateBid(bid.id, 'ptStatus', e.target.value)} className="text-[11px] font-bold outline-none bg-transparent">
+                                <option>확인 필요</option><option>발표없음(서면)</option><option>대면(방문)</option><option>일정미정</option>
                               </select>
                             </td>
-                            <td><input type="datetime-local" value={bid.ptDate} onChange={e=>updateBid(bid.id, 'ptDate', e.target.value)} className="bg-transparent text-[10px] outline-none" /></td>
-                            <td className="text-right">
-                              <button onClick={()=>deleteBid(bid.id)} className="text-slate-200 hover:text-red-500 p-2"><Icons.Trash size={16}/></button>
-                            </td>
+                            <td><input type="datetime-local" value={bid.ptDate} onChange={e=>updateBid(bid.id, 'ptDate', e.target.value)} className="bg-transparent text-[10px]" /></td>
+                            <td className="text-right"><button onClick={()=>deleteBid(bid.id)} className="text-slate-200 hover:text-red-500 p-2"><Icons.Trash size={16}/></button></td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
-                    {bidData.length === 0 && (
-                      <div className="py-40 text-center text-slate-300 font-black text-2xl uppercase tracking-tighter italic opacity-50">NO BIDDING DATA FOUND</div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -370,18 +339,19 @@
                   ))}
                 </div>
                 {activeWeek && (
-                  <div className="bg-white rounded-[3rem] shadow-2xl shadow-slate-200/40 border border-slate-50 p-8 md:p-14 relative group min-h-[500px]">
-                    <button onClick={async () => confirm("삭제하시겠습니까?") && db.doc(`artifacts/${appId}/users/${user.uid}/checklists/${selectedWeekId}`).delete()} className="absolute top-10 right-10 text-slate-200 hover:text-red-500 opacity-0 group-hover:opacity-100 p-2"><Icons.Trash size={22}/></button>
+                  <div className="bg-white rounded-[3rem] shadow-2xl border border-slate-50 p-8 md:p-14 relative group min-h-[500px]">
+                    <button onClick={async () => confirm("삭제하시겠습니까?") && db.doc(`artifacts/${appId}/users/${user.uid}/checklists/${selectedWeekId}`).delete()} className="absolute top-10 right-10 text-slate-200 hover:text-red-500 opacity-0 group-hover:opacity-100 p-2 transition-all"><Icons.Trash size={22}/></button>
                     <h3 className="text-3xl font-black text-slate-800 mb-12 border-b-8 border-blue-600 inline-block pb-1 tracking-tighter uppercase">{activeWeek.title}</h3>
                     <div className="space-y-1">
                       {activeWeek.items.map((item, idx) => (
-                        <div key={item.id} className="flex items-start group/item transition-all py-1.5" style={{ marginLeft: `${item.level * 32}px` }}>
+                        <div key={item.id} className="flex items-start group/item transition-all notion-item py-1.5" style={{ marginLeft: `${item.level * 32}px` }}>
                           <input type="checkbox" checked={item.completed} onChange={(e) => handleCheckItemChange(selectedWeekId, idx, 'completed', e.target.checked)} className="mt-2 w-5 h-5 rounded-md border-2 border-slate-200 accent-blue-600 cursor-pointer" />
                           <input 
                             id={`notion-input-${idx}`} 
                             type="text" 
                             value={item.text} 
                             onChange={(e) => handleCheckItemChange(selectedWeekId, idx, 'text', e.target.value)} 
+                            onKeyDown={(e) => handleCheckKeyDown(e, selectedWeekId, idx)}
                             className={`flex-1 bg-transparent border-none outline-none px-4 py-1 text-xl transition-all ${item.completed ? 'text-slate-300 line-through font-medium' : 'text-slate-700 font-bold'} ${item.bold ? 'font-black underline decoration-blue-500/40' : ''}`} 
                             placeholder="..." 
                             autoComplete="off" 
@@ -394,13 +364,11 @@
               </div>
             ) : (
               <div className="max-w-5xl mx-auto">
-                <div className="mb-14 text-center md:text-left"><h2 className="text-5xl font-black text-slate-800 tracking-tighter uppercase leading-none">Archives</h2><p className="text-slate-400 mt-4 font-bold text-xl uppercase tracking-[0.2em] leading-none">실험 데이터 클라우드</p></div>
+                <div className="mb-14 text-center md:text-left"><h2 className="text-5xl font-black text-slate-800 tracking-tighter uppercase leading-none">Archives</h2><p className="text-slate-400 mt-4 font-bold text-xl uppercase tracking-[0.2em] leading-none">데이터 보관소</p></div>
                 <div className="bg-white rounded-[4rem] p-16 md:p-24 border-4 border-dashed transition-all mb-16 flex flex-col items-center justify-center text-center shadow-sm hover:border-blue-200">
-                   <div className="p-8 rounded-[2rem] mb-6 bg-blue-50 text-blue-600 shadow-xl shadow-blue-100">
-                    <Icons.Beaker size={48}/>
-                  </div>
-                  <h3 className="text-2xl font-black text-slate-800 mb-3 tracking-tighter uppercase leading-none">Ready for Cloud</h3>
-                  <p className="text-slate-400 font-bold text-sm uppercase tracking-widest mt-2">Storage 설정이 완료되면 업로드가 시작됩니다.</p>
+                   <div className="p-8 rounded-[2rem] mb-6 bg-blue-50 text-blue-600 shadow-xl shadow-blue-100"><Icons.Beaker size={48}/></div>
+                  <h3 className="text-2xl font-black text-slate-800 mb-3 tracking-tighter uppercase">Cloud Archives</h3>
+                  <p className="text-slate-400 font-bold text-sm uppercase tracking-widest mt-2">Storage 설정 후 파일 업로드가 가능합니다.</p>
                 </div>
               </div>
             )}

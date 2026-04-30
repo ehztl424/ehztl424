@@ -10,7 +10,6 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- Firebase Compat Mode -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -26,30 +25,24 @@
     
     .spinner {
       border: 3px solid rgba(0, 0, 0, 0.1);
-      width: 32px; height: 32px; border-radius: 50%;
+      width: 28px; height: 28px; border-radius: 50%;
       border-left-color: #2563eb; animation: spin 1s linear infinite;
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     
-    .notion-item:focus-within { background-color: #f1f5f9; border-radius: 8px; }
-    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     
-    /* 체크리스트 타자감 최적화 */
-    .notion-input {
-      caret-color: #2563eb;
-      background: transparent;
-      border: none;
-      outline: none;
-      width: 100%;
-    }
+    .bid-table th { white-space: nowrap; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; padding: 12px 16px; background: #f8fafc; }
+    .bid-table td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; min-width: 120px; }
+    .status-pill { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; display: inline-block; }
   </style>
 </head>
 <body class="bg-[#f8fafc] text-slate-800 antialiased">
   <div id="root">
-    <div class="h-screen flex flex-col items-center justify-center">
+    <div class="h-screen flex flex-col items-center justify-center bg-white">
       <div class="spinner mb-4"></div>
-      <p class="text-slate-400 font-bold text-xs tracking-widest uppercase animate-pulse">시스템 최적화 로딩 중...</p>
+      <p class="text-slate-400 font-bold text-xs tracking-widest uppercase animate-pulse">실험실 데이터 동기화 중...</p>
     </div>
   </div>
 
@@ -58,7 +51,7 @@
       apiKey: "AIzaSyCfHF_0xj-9qdD-VcwDCv_gJtQhDtmvSXQ",
       authDomain: "taejun-lab.firebaseapp.com",
       projectId: "taejun-lab",
-      storageBucket: "taejun-lab.firebasestorage.app", // 방금 생성하신 버킷 확인 완료
+      storageBucket: "taejun-lab.firebasestorage.app",
       messagingSenderId: "1064401778915",
       appId: "1:1064401778915:web:0cf6b5bf131c0c75276dd6"
     };
@@ -75,11 +68,11 @@
       Beaker: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 3h15"/><path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3"/><path d="M6 14h12"/></svg>,
       File: ({size=20}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>,
       Check: ({size=20}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="m9 12 2 2 4-4"/></svg>,
-      Trash: ({size=18}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
+      Table: ({size=20}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>,
       LogOut: ({size=18}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
       Plus: ({size=18}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
       Menu: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,
-      Cloud: ({size=32}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="M16 16l-4-4-4 4"/></svg>
+      Trash: ({size=16}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
     };
 
     function App() {
@@ -90,15 +83,15 @@
       const [errorMsg, setErrorMsg] = useState('');
       const [sidebarOpen, setSidebarOpen] = useState(false);
 
-      const [activeTab, setActiveTab] = useState('checklist');
+      const [activeTab, setActiveTab] = useState('bid_sheet');
       const [archives, setArchives] = useState([]);
       const [weeklyChecklists, setWeeklyChecklists] = useState([]);
       const [selectedWeekId, setSelectedWeekId] = useState(null);
+      
+      // 입찰 시트 데이터
+      const [bidData, setBidData] = useState([]);
+      const [isSyncing, setIsSyncing] = useState(false);
 
-      const [isUploading, setIsUploading] = useState(false);
-      const [isDragging, setIsDragging] = useState(false);
-
-      // --- 체크리스트 디바운스 저장을 위한 Ref ---
       const saveTimerRef = useRef(null);
 
       useEffect(() => {
@@ -113,19 +106,25 @@
         if (!user) return;
         const userPath = `artifacts/${appId}/users/${user.uid}`;
         
+        // 자료 보관소 데이터 구독
         const unsubA = db.collection(`${userPath}/archives`).onSnapshot(snap => {
           setArchives(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.createdAt - a.createdAt));
         });
 
+        // 체크리스트 구독
         const unsubC = db.collection(`${userPath}/checklists`).onSnapshot(snap => {
           const list = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.order - a.order);
           setWeeklyChecklists(list);
-          if (list.length > 0 && !selectedWeekId) {
-            setSelectedWeekId(list[0].id);
-          }
+          if (list.length > 0 && !selectedWeekId) setSelectedWeekId(list[0].id);
         });
 
-        return () => { unsubA(); unsubC(); };
+        // 입찰 시트 데이터 구독
+        const unsubB = db.collection(`${userPath}/bids`).onSnapshot(snap => {
+          const bids = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.createdAt - a.createdAt);
+          setBidData(bids);
+        });
+
+        return () => { unsubA(); unsubC(); unsubB(); };
       }, [user]);
 
       const handleLogin = async (e) => {
@@ -135,107 +134,75 @@
         try {
           await auth.signInWithEmailAndPassword(finalEmail, loginPw);
         } catch (err) {
-          setErrorMsg("접속 정보가 일치하지 않습니다.");
+          setErrorMsg("ID 또는 보안키가 일치하지 않습니다.");
         }
       };
 
-      // --- 서버 동기화 로직 (디바운스) ---
+      // --- 입찰 시트 핸들러 ---
+      const addNewBid = async () => {
+        if (!user) return;
+        const userPath = `artifacts/${appId}/users/${user.uid}`;
+        await db.collection(`${userPath}/bids`).add({
+          status: '진행중',
+          category: 'MICE(PCO)',
+          client: '',
+          title: '',
+          budget: 0,
+          entity: '',
+          submitDate: '',
+          dept: '',
+          author: '',
+          bidAmount: 0,
+          ptStatus: '확인 필요',
+          ptDate: '',
+          result: '',
+          createdAt: Date.now()
+        });
+      };
+
+      const updateBid = (bidId, field, value) => {
+        setBidData(prev => prev.map(item => item.id === bidId ? { ...item, [field]: value } : item));
+        
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(async () => {
+          if (!user) return;
+          const userPath = `artifacts/${appId}/users/${user.uid}`;
+          await db.doc(`${userPath}/bids/${bidId}`).update({ [field]: value });
+        }, 800);
+      };
+
+      const deleteBid = async (id) => {
+        if (!user || !confirm("이 입찰 데이터를 삭제하시겠습니까?")) return;
+        const userPath = `artifacts/${appId}/users/${user.uid}`;
+        await db.doc(`${userPath}/bids/${id}`).delete();
+      };
+
+      const formatCurrency = (val) => {
+        if (!val) return "₩ 0";
+        return "₩ " + Number(val).toLocaleString();
+      };
+
+      // --- 체크리스트 동기화 로직 ---
       const syncChecklist = useCallback((weekId, items) => {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(async () => {
           if (!user) return;
           const userPath = `artifacts/${appId}/users/${user.uid}`;
           await db.doc(`${userPath}/checklists/${weekId}`).update({ items });
-        }, 1000); // 1초간 입력이 멈추면 서버에 최종 상태 기록
+        }, 1000);
       }, [user]);
 
-      const handleItemChange = (weekId, index, field, value) => {
-        // 로컬 상태 즉시 업데이트 (이게 있어야 타자가 안 씹힙니다)
+      const handleCheckItemChange = (weekId, index, field, value) => {
         setWeeklyChecklists(prev => {
           const updated = [...prev];
           const wIdx = updated.findIndex(w => w.id === weekId);
           if (wIdx === -1) return prev;
-          
           const newItems = [...updated[wIdx].items];
           newItems[index] = { ...newItems[index], [field]: value };
           updated[wIdx].items = newItems;
-          
           syncChecklist(weekId, newItems);
           return updated;
         });
-      };
-
-      const handleKeyDown = (e, weekId, index) => {
-        const week = weeklyChecklists.find(w => w.id === weekId);
-        if (!week) return;
-        
-        let newItems = [...week.items];
-        const item = newItems[index];
-
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          const newItem = { id: Date.now().toString(36), text: '', completed: false, level: item.level, bold: false };
-          newItems.splice(index + 1, 0, newItem);
-          
-          setWeeklyChecklists(prev => {
-            const next = [...prev];
-            const wIdx = next.findIndex(w => w.id === weekId);
-            next[wIdx].items = newItems;
-            return next;
-          });
-          syncChecklist(weekId, newItems);
-          setTimeout(() => document.getElementById(`notion-input-${index + 1}`)?.focus(), 10);
-        } 
-        else if (e.key === 'Tab') {
-          e.preventDefault();
-          const newLevel = e.shiftKey ? Math.max(0, item.level - 1) : Math.min(4, item.level + 1);
-          handleItemChange(weekId, index, 'level', newLevel);
-        } 
-        else if (e.key === 'Backspace' && item.text === '' && newItems.length > 1) {
-          e.preventDefault();
-          newItems.splice(index, 1);
-          setWeeklyChecklists(prev => {
-            const next = [...prev];
-            const wIdx = next.findIndex(w => w.id === weekId);
-            next[wIdx].items = newItems;
-            return next;
-          });
-          syncChecklist(weekId, newItems);
-          setTimeout(() => document.getElementById(`notion-input-${index - 1}`)?.focus(), 10);
-        } 
-        else if (e.ctrlKey && e.key.toLowerCase() === 'b') {
-          e.preventDefault();
-          handleItemChange(weekId, index, 'bold', !item.bold);
-        }
-      };
-
-      const addNewWeek = async () => {
-        const name = prompt("주차 명칭 (예: 5월 1주차)");
-        if (!name) return;
-        const userPath = `artifacts/${appId}/users/${user.uid}`;
-        await db.collection(`${userPath}/checklists`).add({
-          title: name,
-          items: [{ id: Date.now().toString(36), text: '', completed: false, level: 0, bold: false }],
-          createdAt: Date.now(), order: Date.now()
-        });
-      };
-
-      const uploadFile = async (file) => {
-        if (!file || !user) return;
-        setIsUploading(true);
-        try {
-          const fileRef = storage.ref(`artifacts/${appId}/users/${user.uid}/files/${Date.now()}_${file.name}`);
-          const snap = await fileRef.put(file);
-          const url = await snap.ref.getDownloadURL();
-          await db.collection(`artifacts/${appId}/users/${user.uid}/archives`).add({
-            name: file.name, url: url, size: (file.size / (1024 * 1024)).toFixed(2) + ' MB', createdAt: Date.now()
-          });
-          alert("클라우드 전송 완료!");
-        } catch (e) { 
-          console.error(e);
-          alert("전송 실패: 카드 등록 확인 또는 Storage 권한을 체크해 주세요."); 
-        }
-        finally { setIsUploading(false); setIsDragging(false); }
       };
 
       if (loading) return null;
@@ -243,17 +210,17 @@
       if (!user) {
         return (
           <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
-            <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl p-10 md:p-14 border border-white">
+            <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl p-10 border border-white">
               <div className="flex justify-center mb-8">
                 <div className="p-4 bg-blue-600 rounded-2xl shadow-xl shadow-blue-200"><Icons.Beaker size={44} color="white"/></div>
               </div>
-              <h1 className="text-3xl font-black text-center text-slate-800 mb-2 tracking-tighter uppercase leading-none">Taejun Lab</h1>
-              <p className="text-center text-slate-400 mb-10 text-[10px] font-bold tracking-[0.4em] uppercase">Private Workspace</p>
+              <h1 className="text-3xl font-black text-center text-slate-800 mb-1 tracking-tighter uppercase leading-none">Taejun Lab</h1>
+              <p className="text-center text-slate-400 mb-10 text-[10px] font-bold tracking-[0.4em] uppercase">Security Console</p>
               <form onSubmit={handleLogin} className="space-y-6">
                 <input type="text" value={loginId} onChange={e=>setLoginId(e.target.value)} placeholder="ID" className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold" required />
                 <input type="password" value={loginPw} onChange={e=>setLoginPw(e.target.value)} placeholder="Security Key" className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 focus:ring-4 focus:ring-blue-500/10 outline-none font-bold" required />
                 {errorMsg && <div className="bg-red-50 text-red-500 text-[11px] text-center font-bold py-3 px-4 rounded-xl animate-shake">{errorMsg}</div>}
-                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl transition-all shadow-xl shadow-blue-200 text-base active:scale-95 uppercase tracking-widest mt-2">Login</button>
+                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-xl shadow-blue-200 text-base active:scale-95 uppercase tracking-widest mt-2">Login</button>
               </form>
             </div>
           </div>
@@ -265,16 +232,19 @@
       return (
         <div className="min-h-screen flex flex-col md:flex-row bg-[#f8fafc]">
           <header className="md:hidden flex items-center justify-between p-4 bg-[#1e293b] text-white sticky top-0 z-50">
-            <div className="flex items-center gap-2"><Icons.Beaker size={18} color="white"/><span className="font-black text-lg uppercase tracking-tighter">Lab</span></div>
+            <div className="flex items-center gap-2 font-black text-lg uppercase tracking-tighter"><Icons.Beaker size={18} color="white"/> Lab</div>
             <button onClick={()=>setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-slate-700 rounded-lg"><Icons.Menu size={22}/></button>
           </header>
 
           <aside className={`${sidebarOpen ? 'flex' : 'hidden'} md:flex fixed md:relative z-40 inset-0 md:inset-auto w-full md:w-64 bg-[#1e293b] text-white p-6 flex-col shadow-2xl`}>
-            <div className="flex items-center gap-3 mb-12 mt-2 px-2">
-              <div className="p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-900/30"><Icons.Beaker size={22} color="white"/></div>
+            <div className="flex items-center gap-3 mb-12 mt-2">
+              <div className="p-2 bg-blue-600 rounded-xl shadow-lg"><Icons.Beaker size={22} color="white"/></div>
               <h1 className="text-xl font-black tracking-tighter uppercase leading-none">Taejun Lab</h1>
             </div>
             <nav className="flex-1 space-y-2">
+              <button onClick={()=>{setActiveTab('bid_sheet'); setSidebarOpen(false);}} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all font-bold text-sm ${activeTab === 'bid_sheet' ? 'bg-blue-600 shadow-xl text-white' : 'text-slate-400 hover:bg-slate-800'}`}>
+                <Icons.Table size={20}/> <span>입찰 참여 시트</span>
+              </button>
               <button onClick={()=>{setActiveTab('checklist'); setSidebarOpen(false);}} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all font-bold text-sm ${activeTab === 'checklist' ? 'bg-blue-600 shadow-xl text-white' : 'text-slate-400 hover:bg-slate-800'}`}>
                 <Icons.Check size={20}/> <span>체크리스트</span>
               </button>
@@ -282,84 +252,155 @@
                 <Icons.File size={20}/> <span>자료 보관소</span>
               </button>
             </nav>
-            <div className="mt-auto pt-6 border-t border-slate-700/50 text-[10px] text-slate-500 font-bold uppercase text-center mb-6 tracking-widest">{user.email.split('@')[0]}</div>
-            <button onClick={()=>auth.signOut()} className="w-full flex items-center justify-center gap-2 bg-slate-800/40 hover:bg-red-500/10 hover:text-red-400 text-slate-400 py-4 rounded-2xl transition-all text-[11px] font-black uppercase border border-slate-700/50 active:scale-95"><Icons.LogOut size={14}/> Sign Out</button>
+            <button onClick={()=>auth.signOut()} className="mt-auto w-full flex items-center justify-center gap-2 bg-slate-800/40 hover:bg-red-500/10 hover:text-red-400 text-slate-400 py-4 rounded-2xl transition-all text-[11px] font-black uppercase border border-slate-700/50 active:scale-95"><Icons.LogOut size={14}/> Sign Out</button>
           </aside>
 
-          <main className="flex-1 p-6 md:p-12 lg:p-16 overflow-y-auto">
-            {activeTab === 'checklist' ? (
-              <div className="max-w-4xl mx-auto">
-                <div className="flex items-center justify-between gap-6 mb-12">
-                  <div><h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase">Protocols</h2><p className="text-slate-400 mt-2 font-bold text-sm uppercase tracking-widest leading-none">업무 로그 기록</p></div>
-                  <button onClick={addNewWeek} className="bg-blue-600 hover:bg-blue-700 text-white font-black px-6 py-3.5 rounded-2xl shadow-xl shadow-blue-100 transition-all active:scale-95"><Icons.Plus size={18}/></button>
-                </div>
-                
-                <div className="flex flex-wrap gap-2 mb-10">
-                  {weeklyChecklists.map(week => (
-                    <button key={week.id} onClick={()=>setSelectedWeekId(week.id)} className={`px-6 py-3 rounded-2xl font-black text-[12px] transition-all border-2 ${selectedWeekId === week.id ? 'bg-slate-800 text-white border-slate-800 shadow-lg' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'}`}>{week.title}</button>
-                  ))}
+          <main className="flex-1 p-6 md:p-10 lg:p-14 overflow-y-auto">
+            {activeTab === 'bid_sheet' ? (
+              <div className="max-w-[1600px] mx-auto">
+                <div className="flex items-center justify-between mb-10">
+                  <div>
+                    <h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase leading-none">Bidding Sheet</h2>
+                    <p className="text-slate-400 mt-2 font-bold text-sm uppercase tracking-widest">입찰 참여 현황 실시간 관리</p>
+                  </div>
+                  <button onClick={addNewBid} className="bg-blue-600 hover:bg-blue-700 text-white font-black px-6 py-3.5 rounded-2xl shadow-xl shadow-blue-100 flex items-center gap-2 active:scale-95 transition-all">
+                    <Icons.Plus size={18}/> 새 입찰 추가
+                  </button>
                 </div>
 
+                <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/40 border border-slate-50 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full bid-table text-left border-collapse">
+                      <thead>
+                        <tr>
+                          <th>진행상태</th>
+                          <th>사업분야</th>
+                          <th>발주처명</th>
+                          <th>공고명</th>
+                          <th>예산</th>
+                          <th>투찰법인</th>
+                          <th>제출일자</th>
+                          <th>부서</th>
+                          <th>작성자</th>
+                          <th>투찰금액</th>
+                          <th>PT 상태</th>
+                          <th>PT 일시</th>
+                          <th className="text-right">관리</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {bidData.map(bid => (
+                          <tr key={bid.id} className="hover:bg-blue-50/30 transition-colors">
+                            <td>
+                              <select 
+                                value={bid.status} 
+                                onChange={(e) => updateBid(bid.id, 'status', e.target.value)}
+                                className={`status-pill outline-none appearance-none cursor-pointer ${
+                                  bid.status === '진행중' ? 'bg-green-100 text-green-700' :
+                                  bid.status === '제출완료' ? 'bg-blue-100 text-blue-700' :
+                                  bid.status === '탈락' ? 'bg-red-100 text-red-700' :
+                                  bid.status === '낙찰' ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100 text-slate-600'
+                                }`}
+                              >
+                                <option>진행중</option>
+                                <option>제출완료</option>
+                                <option>탈락</option>
+                                <option>낙찰</option>
+                                <option>검토중</option>
+                              </select>
+                            </td>
+                            <td><input type="text" value={bid.category} onChange={e=>updateBid(bid.id, 'category', e.target.value)} className="bg-transparent w-full focus:bg-white focus:ring-2 focus:ring-blue-100 rounded px-2" /></td>
+                            <td><input type="text" value={bid.client} onChange={e=>updateBid(bid.id, 'client', e.target.value)} className="bg-transparent w-full focus:bg-white focus:ring-2 focus:ring-blue-100 rounded px-2 font-bold" placeholder="발주처 입력" /></td>
+                            <td><input type="text" value={bid.title} onChange={e=>updateBid(bid.id, 'title', e.target.value)} className="bg-transparent w-full focus:bg-white focus:ring-2 focus:ring-blue-100 rounded px-2" placeholder="공고명 입력" /></td>
+                            <td>
+                              <input 
+                                type="number" 
+                                value={bid.budget} 
+                                onChange={e=>updateBid(bid.id, 'budget', e.target.value)} 
+                                className="bg-transparent w-full focus:bg-white focus:ring-2 focus:ring-blue-100 rounded px-2 text-right font-mono" 
+                              />
+                            </td>
+                            <td><input type="text" value={bid.entity} onChange={e=>updateBid(bid.id, 'entity', e.target.value)} className="bg-transparent w-full focus:bg-white focus:ring-2 focus:ring-blue-100 rounded px-2" /></td>
+                            <td><input type="date" value={bid.submitDate} onChange={e=>updateBid(bid.id, 'submitDate', e.target.value)} className="bg-transparent text-xs outline-none" /></td>
+                            <td><input type="text" value={bid.dept} onChange={e=>updateBid(bid.id, 'dept', e.target.value)} className="bg-transparent w-full" /></td>
+                            <td><input type="text" value={bid.author} onChange={e=>updateBid(bid.id, 'author', e.target.value)} className="bg-transparent w-full" /></td>
+                            <td>
+                              <input 
+                                type="number" 
+                                value={bid.bidAmount} 
+                                onChange={e=>updateBid(bid.id, 'bidAmount', e.target.value)} 
+                                className="bg-transparent w-full focus:bg-white focus:ring-2 focus:ring-blue-100 rounded px-2 text-right font-mono text-blue-600 font-bold" 
+                              />
+                            </td>
+                            <td>
+                              <select 
+                                value={bid.ptStatus} 
+                                onChange={(e) => updateBid(bid.id, 'ptStatus', e.target.value)}
+                                className="text-[11px] font-bold outline-none bg-transparent"
+                              >
+                                <option>확인 필요</option>
+                                <option>발표없음(서면)</option>
+                                <option>대면(방문)</option>
+                                <option>일정미정</option>
+                              </select>
+                            </td>
+                            <td><input type="datetime-local" value={bid.ptDate} onChange={e=>updateBid(bid.id, 'ptDate', e.target.value)} className="bg-transparent text-[10px] outline-none" /></td>
+                            <td className="text-right">
+                              <button onClick={()=>deleteBid(bid.id)} className="text-slate-200 hover:text-red-500 p-2"><Icons.Trash size={16}/></button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {bidData.length === 0 && (
+                      <div className="py-40 text-center text-slate-300 font-black text-2xl uppercase tracking-tighter italic opacity-50">NO BIDDING DATA FOUND</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : activeTab === 'checklist' ? (
+              <div className="max-w-4xl mx-auto">
+                <div className="flex items-center justify-between gap-6 mb-12">
+                  <div><h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase leading-none">Protocols</h2><p className="text-slate-400 mt-2 font-bold text-sm uppercase tracking-widest">연구 주차별 업무 로그</p></div>
+                  <button onClick={addNewWeek} className="bg-blue-600 hover:bg-blue-700 text-white font-black px-6 py-3.5 rounded-2xl shadow-xl shadow-blue-100 transition-all active:scale-95"><Icons.Plus size={18}/></button>
+                </div>
+                <div className="flex flex-wrap gap-2 mb-10 overflow-x-auto pb-2">
+                  {weeklyChecklists.map(week => (
+                    <button key={week.id} onClick={()=>setSelectedWeekId(week.id)} className={`px-6 py-3 rounded-2xl font-black text-[12px] transition-all border-2 whitespace-nowrap ${selectedWeekId === week.id ? 'bg-slate-800 text-white border-slate-800 shadow-lg' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'}`}>{week.title}</button>
+                  ))}
+                </div>
                 {activeWeek && (
                   <div className="bg-white rounded-[3rem] shadow-2xl shadow-slate-200/40 border border-slate-50 p-8 md:p-14 relative group min-h-[500px]">
-                    <button onClick={async () => confirm("이 주차의 데이터를 삭제할까요?") && db.doc(`artifacts/${appId}/users/${user.uid}/checklists/${selectedWeekId}`).delete()} className="absolute top-10 right-10 text-slate-200 hover:text-red-500 opacity-0 group-hover:opacity-100 p-2"><Icons.Trash size={22}/></button>
+                    <button onClick={async () => confirm("삭제하시겠습니까?") && db.doc(`artifacts/${appId}/users/${user.uid}/checklists/${selectedWeekId}`).delete()} className="absolute top-10 right-10 text-slate-200 hover:text-red-500 opacity-0 group-hover:opacity-100 p-2"><Icons.Trash size={22}/></button>
                     <h3 className="text-3xl font-black text-slate-800 mb-12 border-b-8 border-blue-600 inline-block pb-1 tracking-tighter uppercase">{activeWeek.title}</h3>
-                    
                     <div className="space-y-1">
                       {activeWeek.items.map((item, idx) => (
-                        <div key={item.id} className="flex items-start group/item transition-all notion-item py-1.5" style={{ marginLeft: `${item.level * 32}px` }}>
-                          <input type="checkbox" checked={item.completed} onChange={(e) => handleItemChange(selectedWeekId, idx, 'completed', e.target.checked)} className="mt-2 w-5 h-5 rounded-md border-2 border-slate-200 accent-blue-600 cursor-pointer" />
+                        <div key={item.id} className="flex items-start group/item transition-all py-1.5" style={{ marginLeft: `${item.level * 32}px` }}>
+                          <input type="checkbox" checked={item.completed} onChange={(e) => handleCheckItemChange(selectedWeekId, idx, 'completed', e.target.checked)} className="mt-2 w-5 h-5 rounded-md border-2 border-slate-200 accent-blue-600 cursor-pointer" />
                           <input 
                             id={`notion-input-${idx}`} 
                             type="text" 
                             value={item.text} 
-                            onChange={(e) => handleItemChange(selectedWeekId, idx, 'text', e.target.value)} 
-                            onKeyDown={(e) => handleKeyDown(e, selectedWeekId, idx)} 
-                            className={`flex-1 notion-input px-4 py-1 text-xl transition-all ${item.completed ? 'text-slate-300 line-through font-medium' : 'text-slate-700 font-bold'} ${item.bold ? 'font-black underline decoration-blue-500/40' : ''}`} 
-                            placeholder="내용 입력..." 
+                            onChange={(e) => handleCheckItemChange(selectedWeekId, idx, 'text', e.target.value)} 
+                            className={`flex-1 bg-transparent border-none outline-none px-4 py-1 text-xl transition-all ${item.completed ? 'text-slate-300 line-through font-medium' : 'text-slate-700 font-bold'} ${item.bold ? 'font-black underline decoration-blue-500/40' : ''}`} 
+                            placeholder="..." 
                             autoComplete="off" 
                           />
                         </div>
                       ))}
-                    </div>
-
-                    <div className="mt-20 pt-8 border-t border-slate-50 flex flex-wrap gap-6 text-[9px] font-black text-slate-300 uppercase tracking-widest">
-                       <span className="bg-slate-50 px-2 py-1 rounded">Enter: 줄추가</span>
-                       <span className="bg-slate-50 px-2 py-1 rounded">Tab: 들여쓰기</span>
-                       <span className="bg-slate-50 px-2 py-1 rounded">Ctrl+B: 볼드</span>
                     </div>
                   </div>
                 )}
               </div>
             ) : (
               <div className="max-w-5xl mx-auto">
-                <div className="mb-14 text-center md:text-left"><h2 className="text-5xl font-black text-slate-800 tracking-tighter uppercase">Archives</h2><p className="text-slate-400 mt-4 font-bold text-xl uppercase tracking-[0.2em] leading-none">실험 데이터 클라우드</p></div>
-                <div 
-                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} 
-                  onDragLeave={() => setIsDragging(false)} 
-                  onDrop={(e) => { e.preventDefault(); uploadFile(e.dataTransfer.files[0]); }} 
-                  className={`bg-white rounded-[4rem] p-16 md:p-24 border-4 border-dashed transition-all mb-16 flex flex-col items-center justify-center text-center shadow-sm ${isDragging ? 'border-blue-600 bg-blue-50 shadow-xl shadow-blue-100' : 'border-slate-100 hover:border-blue-200'}`}
-                >
-                  <div className={`p-8 rounded-[2rem] mb-6 transition-all ${isUploading ? 'bg-slate-50' : 'bg-blue-50 text-blue-600 shadow-xl shadow-blue-100'}`}>{isUploading ? <div className="spinner" style={{width: '40px', height: '40px'}}></div> : <Icons.Cloud size={48}/>}</div>
-                  <h3 className="text-2xl font-black text-slate-800 mb-3 tracking-tighter">{isUploading ? "클라우드로 전송 중..." : "PDF 또는 파일을 이곳에 끌어다 놓으세요"}</h3>
-                  <label className="bg-[#1e293b] hover:bg-slate-800 text-white font-black px-12 py-4 rounded-[1.25rem] cursor-pointer transition-all active:scale-95 text-sm shadow-xl shadow-slate-200 mt-6 uppercase tracking-widest">Select File<input type="file" className="hidden" onChange={(e) => uploadFile(e.target.files[0])} disabled={isUploading} /></label>
-                </div>
-                <div className="bg-white rounded-[3.5rem] shadow-2xl shadow-slate-200/40 border border-slate-50 overflow-hidden">
-                  <table className="w-full text-left min-w-[600px]">
-                    <thead className="bg-slate-50/50 border-b border-slate-100 text-[11px] font-black text-slate-400 uppercase tracking-widest">
-                      <tr><th className="px-10 py-6">파일 명칭</th><th className="px-10 py-6 text-center">용량</th><th className="px-10 py-6 text-center">날짜</th><th className="px-10 py-6 text-right">관리</th></tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50 text-slate-700">
-                      {archives.map(item => (
-                        <tr key={item.id} className="hover:bg-blue-50/40 transition-all group">
-                          <td className="px-10 py-8 flex items-center gap-6 font-black text-xl tracking-tighter"><Icons.File size={22} className="text-slate-200 group-hover:text-blue-500 transition-all shadow-sm"/><span>{item.name}</span></td>
-                          <td className="px-10 py-8 text-base text-slate-400 font-bold text-center tabular-nums">{item.size || 'N/A'}</td>
-                          <td className="px-10 py-8 text-base text-slate-400 font-bold text-center uppercase tabular-nums">{new Date(item.createdAt).toLocaleDateString()}</td>
-                          <td className="px-10 py-8 text-right"><div className="flex justify-end gap-5"><a href={item.url} target="_blank" rel="noreferrer" className="bg-blue-600 text-white font-black text-[10px] px-8 py-3 rounded-xl transition-all shadow-lg uppercase tracking-widest">Open</a><button onClick={()=>confirm("삭제?") && db.doc(`artifacts/${appId}/users/${user.uid}/archives/${item.id}`).delete()} className="text-slate-200 hover:text-red-500 p-3"><Icons.Trash size={22}/></button></div></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="mb-14 text-center md:text-left"><h2 className="text-5xl font-black text-slate-800 tracking-tighter uppercase leading-none">Archives</h2><p className="text-slate-400 mt-4 font-bold text-xl uppercase tracking-[0.2em] leading-none">실험 데이터 클라우드</p></div>
+                <div className="bg-white rounded-[4rem] p-16 md:p-24 border-4 border-dashed transition-all mb-16 flex flex-col items-center justify-center text-center shadow-sm hover:border-blue-200">
+                   <div className="p-8 rounded-[2rem] mb-6 bg-blue-50 text-blue-600 shadow-xl shadow-blue-100">
+                    <Icons.Beaker size={48}/>
+                  </div>
+                  <h3 className="text-2xl font-black text-slate-800 mb-3 tracking-tighter uppercase leading-none">Ready for Cloud</h3>
+                  <p className="text-slate-400 font-bold text-sm uppercase tracking-widest mt-2">Storage 설정이 완료되면 업로드가 시작됩니다.</p>
                 </div>
               </div>
             )}

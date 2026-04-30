@@ -65,7 +65,7 @@
       const [loginId, setLoginId] = useState('');
       const [loginPw, setLoginPw] = useState('');
       const [errorMsg, setErrorMsg] = useState('');
-      const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
+      const [authMode, setAuthMode] = useState('login'); 
 
       const [activeTab, setActiveTab] = useState('archives');
       const [archives, setArchives] = useState([]);
@@ -88,11 +88,11 @@
 
         const unsubA = onSnapshot(archivesRef, (snap) => {
           setArchives(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.createdAt - a.createdAt));
-        }, (err) => console.error(err));
+        }, (err) => console.error("Firestore Error:", err));
 
         const unsubN = onSnapshot(notesRef, (snap) => {
           setNotes(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.createdAt - a.createdAt));
-        }, (err) => console.error(err));
+        }, (err) => console.error("Firestore Error:", err));
 
         return () => { unsubA(); unsubN(); };
       }, [user]);
@@ -102,17 +102,12 @@
         setErrorMsg('');
 
         if (!loginId.trim() || !loginPw.trim()) {
-          setErrorMsg("아이디와 비밀번호를 모두 입력해 주세요.");
+          setErrorMsg("정보를 모두 입력해 주세요.");
           return;
         }
 
         const finalEmail = loginId.includes('@') ? loginId : `${loginId}@taejun.lab`;
         const finalPw = loginPw;
-
-        if (finalPw.length < 6) {
-          setErrorMsg("비밀번호는 최소 6자리여야 합니다.");
-          return;
-        }
 
         try {
           if (authMode === 'login') {
@@ -121,15 +116,17 @@
             await createUserWithEmailAndPassword(auth, finalEmail, finalPw);
           }
         } catch (err) {
-          console.error(err.code);
-          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-            setErrorMsg("아이디 또는 비밀번호가 일치하지 않습니다. 처음이시라면 하단 '연구원 등록'을 먼저 진행하세요.");
+          console.error("Firebase Auth Error:", err.code);
+          if (err.code === 'auth/operation-not-allowed') {
+            setErrorMsg("설정 오류: 파이어베이스 콘솔에서 '이메일/비밀번호' 로그인을 활성화해야 합니다.");
+          } else if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
+            setErrorMsg("아이디 또는 비밀번호가 일치하지 않습니다.");
           } else if (err.code === 'auth/email-already-in-use') {
-            setErrorMsg("이미 등록된 아이디입니다. 로그인 모드에서 접속하세요.");
+            setErrorMsg("이미 사용 중인 아이디입니다. 로그인 모드에서 접속하세요.");
           } else if (err.code === 'auth/weak-password') {
-            setErrorMsg("비밀번호가 너무 취약합니다 (최소 6자).");
+            setErrorMsg("비밀번호는 최소 6자리여야 합니다.");
           } else {
-            setErrorMsg("시스템 접속 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+            setErrorMsg("시스템 접속 실패: 네트워크 상태 혹은 파이어베이스 설정을 확인하세요.");
           }
         }
       };
@@ -137,26 +134,30 @@
       const addArchive = async (e) => {
         e.preventDefault();
         if(!newFileName || !newFileUrl || !user) return;
-        await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'archives'), {
-          name: newFileName, url: newFileUrl, createdAt: Date.now()
-        });
-        setNewFileName(''); setNewFileUrl('');
+        try {
+          await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'archives'), {
+            name: newFileName, url: newFileUrl, createdAt: Date.now()
+          });
+          setNewFileName(''); setNewFileUrl('');
+        } catch (err) { alert("저장 실패: 파이어베이스 권한 설정을 확인하세요."); }
       };
 
       const addNote = async (e) => {
         e.preventDefault();
         if(!newNoteTitle.trim() || !user) return;
-        await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'notes'), {
-          title: newNoteTitle, content: newNoteContent, createdAt: Date.now()
-        });
-        setNewNoteTitle(''); setNewNoteContent('');
+        try {
+          await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'notes'), {
+            title: newNoteTitle, content: newNoteContent, createdAt: Date.now()
+          });
+          setNewNoteTitle(''); setNewNoteContent('');
+        } catch (err) { alert("저장 실패: 데이터베이스 권한 설정을 확인하세요."); }
       };
 
       if (loading) return <div className="h-screen flex items-center justify-center font-bold text-blue-600 bg-[#f8fafc]">실험실 로딩 중...</div>;
 
       if (!user) {
         return (
-          <div className="min-h-screen bg-[#f1f5f9] flex items-center justify-center p-6">
+          <div className="min-h-screen bg-[#f1f5f9] flex items-center justify-center p-6 font-sans">
             <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl p-12 border border-white transition-all">
               <div className="flex justify-center mb-8">
                 <div className="p-5 bg-blue-600 rounded-3xl shadow-xl shadow-blue-100">
@@ -164,42 +165,40 @@
                 </div>
               </div>
               <h1 className="text-3xl font-black text-center text-slate-800 mb-2 tracking-tight">태준실험실</h1>
-              <p className="text-center text-slate-400 mb-12 text-sm font-semibold tracking-tight">
-                {authMode === 'login' ? 'LABORATORY LOGIN' : 'NEW RESEARCHER REGISTER'}
+              <p className="text-center text-slate-400 mb-12 text-sm font-semibold tracking-tight uppercase">
+                {authMode === 'login' ? 'System Access' : 'New Account'}
               </p>
               
               <form onSubmit={handleAuth} className="space-y-7">
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-[0.2em] mb-2 block">아이디</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-[0.2em] mb-2 block tracking-widest">ID</label>
                   <input 
                     type="text" 
                     value={loginId} 
                     onChange={e=>setLoginId(e.target.value)} 
-                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold placeholder:text-slate-300" 
-                    placeholder="실험실 ID 입력"
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold" 
                     required 
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-[0.2em] mb-2 block">비밀번호</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-[0.2em] mb-2 block tracking-widest">Password</label>
                   <input 
                     type="password" 
                     value={loginPw} 
                     onChange={e=>setLoginPw(e.target.value)} 
-                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold placeholder:text-slate-300" 
-                    placeholder="비밀번호 입력"
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold" 
                     required 
                   />
                 </div>
                 
                 {errorMsg && (
-                  <div className="bg-red-50 border border-red-100 text-red-500 text-[11px] text-center font-bold py-4 px-5 rounded-2xl animate-shake leading-relaxed">
+                  <div className="bg-red-50 border border-red-100 text-red-600 text-[11px] text-center font-bold py-4 px-5 rounded-2xl animate-shake leading-relaxed">
                     {errorMsg}
                   </div>
                 )}
 
-                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4.5 rounded-2xl transition-all shadow-xl shadow-blue-200 text-lg active:scale-[0.98] mt-4">
-                  {authMode === 'login' ? '시스템 로그인' : '연구원 등록'}
+                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4.5 rounded-2xl transition-all shadow-xl shadow-blue-200 text-lg active:scale-[0.98] mt-4 uppercase tracking-widest">
+                  {authMode === 'login' ? 'Login' : 'Register'}
                 </button>
               </form>
 
@@ -208,7 +207,7 @@
                   onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setErrorMsg(''); }}
                   className="text-xs font-bold text-slate-400 hover:text-blue-600 transition-all underline underline-offset-8 decoration-slate-200 hover:decoration-blue-400"
                 >
-                  {authMode === 'login' ? '처음이신가요? 연구원 등록하기' : '이미 계정이 있나요? 로그인하기'}
+                  {authMode === 'login' ? '연구원 등록이 필요하신가요?' : '이미 계정이 있나요? 로그인하기'}
                 </button>
               </div>
             </div>
@@ -218,7 +217,6 @@
 
       return (
         <div className="min-h-screen flex flex-col md:flex-row font-sans">
-          {/* 사이드바 */}
           <aside className="w-full md:w-72 bg-[#1e293b] text-white p-6 flex flex-col shadow-2xl z-10">
             <div className="flex items-center gap-3 mb-12 px-2">
               <div className="p-2.5 bg-blue-600 rounded-xl shadow-lg shadow-blue-900/20"><Beaker size={26} color="white"/></div>
@@ -245,20 +243,19 @@
             </div>
           </aside>
 
-          {/* 메인 영역 */}
           <main className="flex-1 p-6 md:p-14 overflow-y-auto bg-[#f8fafc]">
             {activeTab === 'archives' ? (
               <div className="max-w-6xl mx-auto">
                 <div className="mb-14">
                   <h2 className="text-4xl font-black text-slate-800 tracking-tight">자료 보관소</h2>
-                  <p className="text-slate-400 mt-3 font-bold text-lg">연구 및 업무에 필요한 주요 서류 링크를 관리합니다.</p>
+                  <p className="text-slate-400 mt-3 font-bold text-lg">주요 서류 및 업무 링크를 안전하게 관리합니다.</p>
                 </div>
 
                 <div className="bg-white rounded-[3rem] shadow-sm border border-slate-200/60 p-12 mb-12">
                   <h3 className="text-[10px] font-black text-slate-300 mb-8 uppercase tracking-[0.4em]">신규 데이터 등록</h3>
                   <form onSubmit={addArchive} className="flex flex-col lg:flex-row gap-6">
-                    <input type="text" placeholder="자료 명칭" value={newFileName} onChange={e=>setNewFileName(e.target.value)} className="flex-1 bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold placeholder:text-slate-300 shadow-inner" required />
-                    <input type="url" placeholder="구글 드라이브 / URL 링크" value={newFileUrl} onChange={e=>setNewFileUrl(e.target.value)} className="flex-[2] bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold placeholder:text-slate-300 shadow-inner" required />
+                    <input type="text" placeholder="자료 명칭" value={newFileName} onChange={e=>setNewFileName(e.target.value)} className="flex-1 bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold shadow-inner" required />
+                    <input type="url" placeholder="구글 드라이브 / URL 링크" value={newFileUrl} onChange={e=>setNewFileUrl(e.target.value)} className="flex-[2] bg-slate-50 border border-slate-100 rounded-2xl px-6 py-5 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold shadow-inner" required />
                     <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl px-12 py-5 transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-3 active:scale-95 whitespace-nowrap">
                       <Plus size={22}/> 데이터 등록
                     </button>
@@ -269,25 +266,20 @@
                   <table className="w-full text-left">
                     <thead className="bg-slate-50/50 border-b border-slate-100">
                       <tr>
-                        <th className="px-12 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest">연구 자료 명칭</th>
-                        <th className="px-12 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">등록 시점</th>
+                        <th className="px-12 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest">명칭</th>
+                        <th className="px-12 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">등록일</th>
                         <th className="px-12 py-7 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">관리</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {archives.map(item => (
                         <tr key={item.id} className="hover:bg-blue-50/40 transition-all group">
-                          <td className="px-12 py-8">
-                            <div className="flex items-center gap-6">
-                              <div className="p-4 bg-slate-100 rounded-2xl text-slate-400 group-hover:bg-white group-hover:text-blue-600 group-hover:shadow-md transition-all shadow-sm border border-transparent group-hover:border-blue-50"><FileText size={22}/></div>
-                              <span className="font-extrabold text-slate-700 text-xl tracking-tight leading-none">{item.name}</span>
-                            </div>
-                          </td>
+                          <td className="px-12 py-8 text-xl font-extrabold text-slate-700 tracking-tight leading-none">{item.name}</td>
                           <td className="px-12 py-8 text-sm text-slate-400 font-bold text-center tracking-tighter uppercase">{new Date(item.createdAt).toLocaleDateString()}</td>
                           <td className="px-12 py-8 text-right">
                             <div className="flex justify-end gap-5">
                               <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-600 hover:text-white hover:bg-blue-600 font-black text-[11px] bg-blue-50 px-8 py-3.5 rounded-2xl transition-all border border-blue-100 shadow-sm active:scale-[0.92] uppercase tracking-wider">
-                                <ExternalLink size={14}/> Open Link
+                                Open Link
                               </a>
                               <button onClick={()=>confirm("이 자료를 영구 삭제하시겠습니까?") && deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'archives', item.id))} className="text-slate-200 hover:text-red-500 p-3 transition-all active:rotate-12">
                                 <Trash size={22}/>
@@ -297,14 +289,7 @@
                         </tr>
                       ))}
                       {archives.length === 0 && (
-                        <tr>
-                          <td colSpan="3" className="px-12 py-48 text-center">
-                            <div className="flex flex-col items-center gap-5 text-slate-300">
-                              <FileText size={56} />
-                              <p className="font-bold text-2xl italic tracking-tighter leading-none">NO DATA REGISTERED</p>
-                            </div>
-                          </td>
-                        </tr>
+                        <tr><td colSpan="3" className="px-12 py-48 text-center text-slate-300 font-bold text-xl italic tracking-tighter">데이터가 없습니다.</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -314,39 +299,30 @@
               <div className="max-w-5xl mx-auto">
                 <div className="mb-14">
                   <h2 className="text-4xl font-black text-slate-800 tracking-tight">업무 일지</h2>
-                  <p className="text-slate-400 mt-3 font-bold text-lg">업무 진행 상황과 연구 로그를 실시간으로 기록합니다.</p>
+                  <p className="text-slate-400 mt-3 font-bold text-lg">업무 기록과 실험 로그를 보관합니다.</p>
                 </div>
 
                 <div className="bg-white rounded-[3rem] shadow-sm border border-slate-200/60 p-12 mb-12">
-                  <h3 className="text-[10px] font-black text-slate-300 mb-8 uppercase tracking-[0.4em]">새 실험 로그 작성</h3>
                   <form onSubmit={addNote} className="space-y-6">
-                    <input type="text" placeholder="제목 (프로젝트명 혹은 날짜)" value={newNoteTitle} onChange={e=>setNewNoteTitle(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-8 py-5 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black text-xl placeholder:text-slate-300 shadow-inner" required />
-                    <textarea placeholder="연구 내용을 상세히 기술하세요..." value={newNoteContent} onChange={e=>setNewNoteContent(e.target.value)} rows="6" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-8 py-6 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold placeholder:text-slate-300 resize-none shadow-inner text-lg" />
+                    <input type="text" placeholder="제목" value={newNoteTitle} onChange={e=>setNewNoteTitle(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-8 py-5 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none font-black text-xl shadow-inner" required />
+                    <textarea placeholder="연구 로그 기록..." value={newNoteContent} onChange={e=>setNewNoteContent(e.target.value)} rows="6" className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-8 py-6 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none font-bold shadow-inner text-lg" />
                     <div className="flex justify-end">
-                      <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl px-14 py-5 transition-all shadow-xl shadow-blue-100 flex items-center gap-3 active:scale-95">
-                        <Plus size={22}/> 로그 보관
-                      </button>
+                      <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl px-14 py-5 shadow-xl shadow-blue-100 active:scale-95">저장</button>
                     </div>
                   </form>
                 </div>
 
                 <div className="grid gap-8 md:grid-cols-2">
                   {notes.map(note => (
-                    <div key={note.id} className="bg-white border border-slate-200 rounded-[3rem] p-12 shadow-sm group hover:border-blue-300 transition-all hover:shadow-2xl hover:shadow-blue-900/5 relative">
+                    <div key={note.id} className="bg-white border border-slate-200 rounded-[3rem] p-12 shadow-sm group hover:border-blue-300 transition-all hover:shadow-2xl relative">
                       <div className="flex justify-between items-start mb-8">
                         <h3 className="font-black text-slate-800 text-2xl tracking-tighter leading-tight flex-1 pr-6">{note.title}</h3>
-                        <button onClick={()=>confirm("해당 로그를 영구 삭제하시겠습니까?") && deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'notes', note.id))} className="text-slate-100 group-hover:text-red-400 transition-all p-2 active:scale-90"><Trash size={22}/></button>
+                        <button onClick={()=>confirm("삭제하시겠습니까?") && deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'notes', note.id))} className="text-slate-100 group-hover:text-red-400 transition-all p-2"><Trash size={22}/></button>
                       </div>
-                      <div className="h-1 w-14 bg-blue-600 mb-8 rounded-full group-hover:w-24 transition-all duration-700"></div>
                       <p className="text-slate-500 leading-relaxed font-bold whitespace-pre-wrap mb-14 text-lg">{note.content}</p>
                       <div className="absolute bottom-12 left-12 text-[10px] font-black text-slate-300 uppercase tracking-widest bg-slate-50 px-5 py-2.5 rounded-2xl border border-slate-100">{new Date(note.createdAt).toLocaleString()}</div>
                     </div>
                   ))}
-                  {notes.length === 0 && (
-                    <div className="col-span-full py-48 text-center bg-white rounded-[3rem] border border-dashed border-slate-200">
-                       <p className="font-black text-slate-300 text-3xl italic tracking-tighter opacity-50">NO RESEARCH NOTES</p>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -364,23 +340,10 @@
       25% { transform: translateX(-5px); }
       75% { transform: translateX(5px); }
     }
-    .animate-shake {
-      animation: shake 0.3s ease-in-out;
-    }
-    ::-webkit-scrollbar {
-      width: 10px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #f8fafc;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #e2e8f0;
-      border-radius: 20px;
-      border: 3px solid #f8fafc;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #cbd5e1;
-    }
+    .animate-shake { animation: shake 0.3s ease-in-out; }
+    ::-webkit-scrollbar { width: 10px; }
+    ::-webkit-scrollbar-track { background: #f8fafc; }
+    ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 20px; border: 3px solid #f8fafc; }
   </style>
 </body>
 </html>

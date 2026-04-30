@@ -3,19 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>태준실험실</title>
+  <title>태준실험실 - 전문 자료관리시스템</title>
   
-  <!-- 1. Tailwind CSS (디자인) -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- 2. React & ReactDOM (화면 구성) -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  
-  <!-- 3. Babel (React 코드 번역기) -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- 4. Firebase 라이브러리 연결 -->
   <script type="importmap">
     {
       "imports": {
@@ -26,28 +20,24 @@
     }
   </script>
 </head>
-<body class="bg-gray-950 text-gray-300">
+<body class="bg-[#f0f2f5] text-gray-800">
   <div id="root"></div>
 
-  <!-- 5. 실제 애플리케이션 코드 -->
   <script type="text/babel" data-type="module">
     import { initializeApp } from 'firebase/app';
-    import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-    import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, addDoc } from 'firebase/firestore';
+    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+    import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, addDoc, query, orderBy } from 'firebase/firestore';
 
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef } = React;
 
-    // --- 아이콘 컴포넌트 (외부 라이브러리 없이 직접 내장) ---
-    const Beaker = ({size=24}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 3h15"/><path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3"/><path d="M6 14h12"/></svg>;
-    const ClipboardList = ({size=24}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>;
-    const BookOpen = ({size=24}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
-    const Trash2 = ({size=24}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>;
-    const Plus = ({size=24}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>;
-    const RefreshCw = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>;
-    const TerminalIcon = ({size=24}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>;
-    const CheckSquare = ({size=24}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>;
+    // --- 아이콘 (SVG) ---
+    const Beaker = ({size=24, color="currentColor"}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 3h15"/><path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3"/><path d="M6 14h12"/></svg>;
+    const FileText = ({size=20}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>;
+    const ExternalLink = ({size=18}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>;
+    const LogOut = ({size=18}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>;
+    const Trash = ({size=18}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
 
-    // --- 회원님의 고유 Firebase 설정 ---
+    // --- Firebase 설정 (회원님 설정값) ---
     const firebaseConfig = {
       apiKey: "AIzaSyCfHF_0xj-9qdD-VcwDCv_gJtQhDtmvSXQ",
       authDomain: "taejun-lab.firebaseapp.com",
@@ -60,256 +50,177 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const appId = 'taejun-lab'; // 깃허브용 고정 ID
+    const appId = 'taejun-lab';
 
     function App() {
       const [user, setUser] = useState(null);
-      const [activeTab, setActiveTab] = useState('logs');
-      const [logs, setLogs] = useState([]);
-      const [tasks, setTasks] = useState([]);
-      const [newLogTitle, setNewLogTitle] = useState('');
-      const [newLogContent, setNewLogContent] = useState('');
-      const [newTaskTitle, setNewTaskTitle] = useState('');
-      const [isSyncing, setIsSyncing] = useState(true);
+      const [loading, setLoading] = useState(true);
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [isSignUp, setIsSignUp] = useState(false);
+      const [errorMsg, setErrorMsg] = useState('');
+
+      const [activeTab, setActiveTab] = useState('archives');
+      const [archives, setArchives] = useState([]);
+      const [notes, setNotes] = useState([]);
       
-      const [checklist, setChecklist] = useState([{ id: 'init', text: '', completed: false }]);
+      const [newFileName, setNewFileName] = useState('');
+      const [newFileUrl, setNewFileUrl] = useState('');
 
-      // --- 로그인 및 동기화 설정 ---
       useEffect(() => {
-        const initAuth = async () => {
-          try {
-            await signInAnonymously(auth); // 깔끔하게 익명 로그인만 수행하도록 변경
-          } catch (error) {
-            console.error("Auth error:", error);
-          }
-        };
-        initAuth();
-
-        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-          setUser(currentUser);
-          setIsSyncing(false);
-        });
-
-        return () => unsubscribe();
+        const unsub = onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
+        return () => unsub();
       }, []);
 
       useEffect(() => {
         if (!user) return;
+        const archivesRef = collection(db, 'artifacts', appId, 'users', user.uid, 'archives');
+        const notesRef = collection(db, 'artifacts', appId, 'users', user.uid, 'notes');
 
-        setIsSyncing(true);
-        const logsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'logs');
-        const tasksRef = collection(db, 'artifacts', appId, 'users', user.uid, 'tasks');
-        const checklistRef = doc(db, 'artifacts', appId, 'users', user.uid, 'system', 'notion_checklist');
+        const unsubA = onSnapshot(archivesRef, (snap) => {
+          setArchives(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.createdAt - a.createdAt));
+        });
+        const unsubN = onSnapshot(notesRef, (snap) => {
+          setNotes(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.createdAt - a.createdAt));
+        });
 
-        const unsubLogs = onSnapshot(logsRef, (snapshot) => {
-          const logsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          logsData.sort((a, b) => b.createdAt - a.createdAt);
-          setLogs(logsData);
-          setIsSyncing(false);
-        }, (error) => console.error("Logs sync error:", error));
-
-        const unsubTasks = onSnapshot(tasksRef, (snapshot) => {
-          const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          tasksData.sort((a, b) => b.createdAt - a.createdAt);
-          setTasks(tasksData);
-        }, (error) => console.error("Tasks sync error:", error));
-
-        const unsubChecklist = onSnapshot(checklistRef, (docSnap) => {
-          if (docSnap.exists() && docSnap.data().items) {
-            setChecklist(docSnap.data().items);
-          }
-        }, (error) => console.error("Checklist sync error:", error));
-
-        return () => {
-          unsubLogs();
-          unsubTasks();
-          unsubChecklist();
-        };
+        return () => { unsubA(); unsubN(); };
       }, [user]);
 
-      // --- 핸들러 함수들 ---
-      const handleAddLog = async (e) => {
+      const handleAuth = async (e) => {
         e.preventDefault();
-        if (!newLogTitle.trim() || !user) return;
-        const logsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'logs');
-        await addDoc(logsRef, { title: newLogTitle, content: newLogContent, createdAt: Date.now() });
-        setNewLogTitle('');
-        setNewLogContent('');
+        try {
+          if (isSignUp) await createUserWithEmailAndPassword(auth, email, password);
+          else await signInWithEmailAndPassword(auth, email, password);
+        } catch (err) { setErrorMsg("접속 정보가 일치하지 않습니다."); }
       };
 
-      const handleDeleteLog = async (id) => {
-        if (!user) return;
-        await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'logs', id));
-      };
-
-      const handleAddTask = async (e) => {
+      const addArchive = async (e) => {
         e.preventDefault();
-        if (!newTaskTitle.trim() || !user) return;
-        const tasksRef = collection(db, 'artifacts', appId, 'users', user.uid, 'tasks');
-        await addDoc(tasksRef, { title: newTaskTitle, completed: false, createdAt: Date.now() });
-        setNewTaskTitle('');
+        if(!newFileName || !newFileUrl) return;
+        await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'archives'), {
+          name: newFileName, url: newFileUrl, createdAt: Date.now()
+        });
+        setNewFileName(''); setNewFileUrl('');
       };
 
-      const handleToggleTask = async (id, currentStatus) => {
-        if (!user) return;
-        const taskRef = doc(db, 'artifacts', appId, 'users', user.uid, 'tasks', id);
-        await setDoc(taskRef, { completed: !currentStatus }, { merge: true });
-      };
-
-      const handleDeleteTask = async (id) => {
-        if (!user) return;
-        await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'tasks', id));
-      };
-
-      const updateChecklistDb = async (newItems) => {
-        setChecklist(newItems);
-        if (!user) return;
-        const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'system', 'notion_checklist');
-        await setDoc(ref, { items: newItems }, { merge: true });
-      };
-
-      const handleChecklistChange = (text, index) => {
-        const newItems = [...checklist];
-        newItems[index].text = text;
-        updateChecklistDb(newItems);
-      };
-
-      const handleChecklistToggle = (index) => {
-        const newItems = [...checklist];
-        newItems[index].completed = !newItems[index].completed;
-        updateChecklistDb(newItems);
-      };
-
-      const handleChecklistKeyDown = (e, index) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          const newItems = [...checklist];
-          const newItem = { id: Date.now().toString(36) + Math.random().toString(36).substr(2), text: '', completed: false };
-          newItems.splice(index + 1, 0, newItem);
-          updateChecklistDb(newItems);
-          setTimeout(() => document.getElementById(`check-${index + 1}`)?.focus(), 10);
-        } else if (e.key === 'Backspace' && checklist[index].text === '') {
-          e.preventDefault();
-          if (checklist.length <= 1) return;
-          const newItems = [...checklist];
-          newItems.splice(index, 1);
-          updateChecklistDb(newItems);
-          setTimeout(() => document.getElementById(`check-${index - 1}`)?.focus(), 10);
-        } else if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          if (index > 0) document.getElementById(`check-${index - 1}`)?.focus();
-        } else if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          if (index < checklist.length - 1) document.getElementById(`check-${index + 1}`)?.focus();
-        }
-      };
+      if (loading) return <div className="h-screen flex items-center justify-center font-bold text-blue-600">시스템 로딩 중...</div>;
 
       if (!user) {
         return (
-          <div className="min-h-screen bg-gray-950 text-emerald-500 flex items-center justify-center font-mono">
-            <div className="flex flex-col items-center animate-pulse">
-              <div className="mb-4"><Beaker size={48} /></div>
-              <h1 className="text-xl">연구소 보안 시스템 접속 중...</h1>
+          <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center p-4">
+            <div className="max-w-md w-full bg-white rounded-xl shadow-xl p-8">
+              <h1 className="text-2xl font-bold text-center text-blue-700 mb-2">태준실험실 자료관리</h1>
+              <p className="text-center text-gray-500 mb-8 text-sm">로그인하여 시스템을 시작하세요</p>
+              <form onSubmit={handleAuth} className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-gray-600 ml-1">아이디 (이메일)</label>
+                  <input type="email" value={email} onChange={e=>setEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg p-3 mt-1 focus:ring-2 focus:ring-blue-500 outline-none" required />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-600 ml-1">비밀번호</label>
+                  <input type="password" value={password} onChange={e=>setPassword(e.target.value)} className="w-full border border-gray-300 rounded-lg p-3 mt-1 focus:ring-2 focus:ring-blue-500 outline-none" required />
+                </div>
+                {errorMsg && <p className="text-red-500 text-xs text-center">{errorMsg}</p>}
+                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition-colors shadow-md">
+                  {isSignUp ? "연구원 등록" : "로그인"}
+                </button>
+              </form>
+              <button onClick={()=>setIsSignUp(!isSignUp)} className="w-full mt-6 text-sm text-blue-600 hover:underline">
+                {isSignUp ? "계정이 이미 있나요? 로그인" : "처음인가요? 회원가입하기"}
+              </button>
             </div>
           </div>
         );
       }
 
       return (
-        <div className="min-h-screen bg-gray-950 text-gray-300 font-mono flex flex-col md:flex-row">
-          <aside className="w-full md:w-64 bg-gray-900 border-r border-gray-800 p-4 flex flex-col">
-            <div className="flex items-center gap-3 mb-8 text-emerald-400">
-              <Beaker size={28} />
-              <h1 className="text-xl font-bold tracking-wider">태준실험실</h1>
+        <div className="min-h-screen flex flex-col md:flex-row">
+          {/* 사이드바 */}
+          <aside className="w-full md:w-72 bg-[#1e293b] text-white p-6 flex flex-col">
+            <div className="flex items-center gap-3 mb-10">
+              <div className="p-2 bg-blue-600 rounded-lg"><Beaker size={24} color="white"/></div>
+              <h1 className="text-xl font-bold tracking-tight">태준실험실 Pro</h1>
             </div>
-
-            <nav className="flex-1 space-y-2">
-              <button onClick={() => setActiveTab('logs')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'logs' ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800/50' : 'hover:bg-gray-800 text-gray-400'}`}>
-                <BookOpen size={18} /><span>실험 일지 (Notes)</span>
+            
+            <nav className="flex-1 space-y-1">
+              <button onClick={()=>setActiveTab('archives')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${activeTab === 'archives' ? 'bg-blue-600 shadow-lg' : 'text-gray-400 hover:bg-gray-800'}`}>
+                <FileText size={20}/> <span>자료 보관소</span>
               </button>
-              <button onClick={() => setActiveTab('tasks')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'tasks' ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800/50' : 'hover:bg-gray-800 text-gray-400'}`}>
-                <ClipboardList size={18} /><span>프로토콜 (Tasks)</span>
-              </button>
-              <button onClick={() => setActiveTab('checklists')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'checklists' ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800/50' : 'hover:bg-gray-800 text-gray-400'}`}>
-                <CheckSquare size={18} /><span>노션 체크리스트</span>
+              <button onClick={()=>setActiveTab('notes')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${activeTab === 'notes' ? 'bg-blue-600 shadow-lg' : 'text-gray-400 hover:bg-gray-800'}`}>
+                <Beaker size={20} color="currentColor"/> <span>연구 일지</span>
               </button>
             </nav>
 
-            <div className="mt-auto pt-4 border-t border-gray-800 text-xs text-gray-500 flex items-center gap-2">
-              {isSyncing ? <RefreshCw size={14} className="animate-spin" /> : <TerminalIcon size={14} />}
-              <span>{isSyncing ? '클라우드 동기화 중...' : '클라우드 연결 완료'}</span>
+            <div className="mt-auto pt-6 border-t border-gray-700">
+              <div className="text-xs text-gray-400 mb-4 px-2 truncate">{user.email}</div>
+              <button onClick={()=>signOut(auth)} className="w-full flex items-center justify-center gap-2 bg-gray-800 hover:bg-red-900/40 text-gray-300 py-2.5 rounded-lg transition-all text-sm font-medium">
+                <LogOut size={16}/> 시스템 로그아웃
+              </button>
             </div>
           </aside>
 
-          <main className="flex-1 p-6 md:p-10 max-h-screen overflow-y-auto">
-            {activeTab === 'logs' && (
-              <div className="max-w-4xl mx-auto">
-                <header className="mb-8 border-b border-gray-800 pb-4">
-                  <h2 className="text-2xl font-bold text-emerald-400 flex items-center gap-2"><BookOpen size={24} />연구/업무 일지 기록</h2>
-                </header>
-                <form onSubmit={handleAddLog} className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-8 shadow-lg">
-                  <input type="text" placeholder="제목을 입력하세요" value={newLogTitle} onChange={(e) => setNewLogTitle(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2 text-gray-200 mb-4 focus:outline-none focus:border-emerald-500" />
-                  <textarea placeholder="상세 내용을 입력하세요..." value={newLogContent} onChange={(e) => setNewLogContent(e.target.value)} rows="4" className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2 text-gray-200 mb-4 focus:outline-none focus:border-emerald-500 resize-none" />
-                  <div className="flex justify-end">
-                    <button type="submit" disabled={!newLogTitle.trim()} className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-50">
-                      <Plus size={18} />기록 저장
-                    </button>
+          {/* 메인 영역 */}
+          <main className="flex-1 p-6 md:p-10 overflow-y-auto">
+            {activeTab === 'archives' ? (
+              <div className="max-w-5xl mx-auto">
+                <div className="flex justify-between items-end mb-8">
+                  <div>
+                    <h2 className="text-3xl font-bold text-gray-800">자료 보관소</h2>
+                    <p className="text-gray-500 mt-1 text-sm">중요 문서와 파일 링크를 안전하게 관리합니다.</p>
                   </div>
-                </form>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {logs.map((log) => (
-                    <div key={log.id} className="bg-gray-900 border border-gray-800 rounded-xl p-5 flex flex-col group hover:border-emerald-900 transition-colors">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-bold text-gray-200 text-lg truncate pr-4">{log.title}</h3>
-                        <button onClick={() => handleDeleteLog(log.id)} className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={16} /></button>
-                      </div>
-                      <p className="text-gray-400 text-sm whitespace-pre-wrap flex-1 mb-4">{log.content || '내용 없음'}</p>
-                    </div>
-                  ))}
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
+                  <h3 className="text-sm font-bold text-gray-700 mb-4 uppercase tracking-wider">새 자료 등록</h3>
+                  <form onSubmit={addArchive} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <input type="text" placeholder="자료 명칭 (예: 24년 정산서)" value={newFileName} onChange={e=>setNewFileName(e.target.value)} className="md:col-span-1 border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" required />
+                    <input type="url" placeholder="파일 링크 (구글드라이브 등)" value={newFileUrl} onChange={e=>setNewFileUrl(e.target.value)} className="md:col-span-1 border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none" required />
+                    <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg py-2.5 transition-all shadow-md">자료 추가하기</button>
+                  </form>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                  <table className="w-full text-left">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">자료 이름</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase">등록일</th>
+                        <th className="px-6 py-4 text-xs font-bold text-gray-500 uppercase text-right">관리</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {archives.map(item => (
+                        <tr key={item.id} className="hover:bg-blue-50/30 transition-colors">
+                          <td className="px-6 py-5">
+                            <div className="flex items-center gap-3">
+                              <div className="text-blue-600"><FileText size={22}/></div>
+                              <span className="font-semibold text-gray-800">{item.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-5 text-sm text-gray-500">{new Date(item.createdAt).toLocaleDateString()}</td>
+                          <td className="px-6 py-5 text-right">
+                            <div className="flex justify-end gap-3">
+                              <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-blue-600 hover:text-blue-800 font-bold text-sm bg-blue-50 px-3 py-1.5 rounded-lg transition-all">
+                                <ExternalLink size={14}/> 열기
+                              </a>
+                              <button onClick={()=>deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'archives', item.id))} className="text-gray-400 hover:text-red-600 p-1.5 transition-all">
+                                <Trash size={18}/>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {archives.length === 0 && <tr><td colSpan="3" className="px-6 py-20 text-center text-gray-400 italic font-serif">현재 보관된 자료가 없습니다.</td></tr>}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            )}
-
-            {activeTab === 'tasks' && (
-              <div className="max-w-3xl mx-auto">
-                <header className="mb-8 border-b border-gray-800 pb-4">
-                  <h2 className="text-2xl font-bold text-emerald-400 flex items-center gap-2"><ClipboardList size={24} />진행 프로토콜 (할 일 목록)</h2>
-                </header>
-                <form onSubmit={handleAddTask} className="flex gap-2 mb-8">
-                  <input type="text" placeholder="새로운 할 일 입력..." value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} className="flex-1 bg-gray-900 border border-gray-800 rounded-lg px-4 py-3 text-gray-200 focus:outline-none focus:border-emerald-500" />
-                  <button type="submit" disabled={!newTaskTitle.trim()} className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">추가</button>
-                </form>
-                <div className="space-y-2">
-                  {tasks.map((task) => (
-                    <div key={task.id} className={`flex items-center justify-between p-4 rounded-lg border ${task.completed ? 'bg-gray-900/50 border-gray-800/50' : 'bg-gray-900 border-gray-800'}`}>
-                      <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => handleToggleTask(task.id, task.completed)}>
-                        <div className={`w-5 h-5 rounded border flex items-center justify-center ${task.completed ? 'bg-emerald-500 border-emerald-500 text-gray-900' : 'border-gray-600'}`}>
-                          {task.completed && <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>}
-                        </div>
-                        <span className={`${task.completed ? 'text-gray-600 line-through' : 'text-gray-300'}`}>{task.title}</span>
-                      </div>
-                      <button onClick={() => handleDeleteTask(task.id)} className="text-gray-600 hover:text-red-400 p-2"><Trash2 size={16} /></button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'checklists' && (
-              <div className="max-w-3xl mx-auto">
-                <header className="mb-8 border-b border-gray-800 pb-4">
-                  <h2 className="text-2xl font-bold text-emerald-400 flex items-center gap-2"><CheckSquare size={24} />스마트 체크리스트</h2>
-                </header>
-                <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-lg min-h-[400px]">
-                  {checklist.map((item, index) => (
-                    <div key={item.id} className="flex items-start gap-3 group mb-1.5">
-                      <button onClick={() => handleChecklistToggle(index)} className={`mt-1 flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-colors ${item.completed ? 'bg-emerald-500 border-emerald-500 text-gray-900' : 'border-gray-500 hover:border-emerald-400 bg-gray-950'}`}>
-                        {item.completed && <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>}
-                      </button>
-                      <input id={`check-${index}`} type="text" value={item.text} onChange={(e) => handleChecklistChange(e.target.value, index)} onKeyDown={(e) => handleChecklistKeyDown(e, index)} placeholder="할 일 입력..." autoComplete="off" className={`flex-1 bg-transparent border-none focus:outline-none py-0.5 text-gray-200 placeholder-gray-700 ${item.completed ? 'text-gray-600 line-through' : ''}`} />
-                      <button onClick={() => { if(checklist.length > 1) { const newItems = [...checklist]; newItems.splice(index, 1); updateChecklistDb(newItems); } }} className="text-gray-700 hover:text-red-400 opacity-0 group-hover:opacity-100 p-1 transition-opacity"><Trash2 size={14} /></button>
-                    </div>
-                  ))}
+            ) : (
+              <div className="max-w-4xl mx-auto">
+                <h2 className="text-3xl font-bold text-gray-800 mb-8">연구 일지</h2>
+                <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300 text-gray-400">
+                  연구 일지 기능은 현재 점검 중입니다. <br/> 자료 보관소 기능을 먼저 이용해 보세요!
                 </div>
               </div>
             )}
@@ -318,7 +229,6 @@
       );
     }
 
-    // React 앱 실행
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>

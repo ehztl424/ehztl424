@@ -25,7 +25,14 @@
 
   <script type="text/babel" data-type="module">
     import { initializeApp } from 'firebase/app';
-    import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+    import { 
+      getAuth, 
+      onAuthStateChanged, 
+      createUserWithEmailAndPassword, 
+      signInWithEmailAndPassword, 
+      signOut,
+      updatePassword
+    } from 'firebase/auth';
     import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, addDoc, query, orderBy } from 'firebase/firestore';
 
     const { useState, useEffect, useRef } = React;
@@ -59,6 +66,7 @@
       const [loginId, setLoginId] = useState('');
       const [loginPw, setLoginPw] = useState('');
       const [errorMsg, setErrorMsg] = useState('');
+      const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
 
       const [activeTab, setActiveTab] = useState('archives');
       const [archives, setArchives] = useState([]);
@@ -81,36 +89,48 @@
 
         const unsubA = onSnapshot(archivesRef, (snap) => {
           setArchives(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.createdAt - a.createdAt));
-        });
+        }, (err) => console.error(err));
+
         const unsubN = onSnapshot(notesRef, (snap) => {
           setNotes(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.createdAt - a.createdAt));
-        });
+        }, (err) => console.error(err));
 
         return () => { unsubA(); unsubN(); };
       }, [user]);
 
-      const handleLogin = async (e) => {
+      const handleAuth = async (e) => {
         e.preventDefault();
         setErrorMsg('');
 
-        // 입력받은 ID를 시스템용 이메일로 변환
         const finalEmail = loginId.includes('@') ? loginId : `${loginId}@taejun.lab`;
-        const finalPw = loginPw; // 이제 141592(6자리)이므로 그대로 사용 가능
+        const finalPw = loginPw;
+
+        if (finalPw.length < 6) {
+          setErrorMsg("비밀번호는 최소 6자리여야 합니다.");
+          return;
+        }
 
         try {
-          await signInWithEmailAndPassword(auth, finalEmail, finalPw);
-        } catch (err) {
-          try {
+          if (authMode === 'login') {
+            await signInWithEmailAndPassword(auth, finalEmail, finalPw);
+          } else {
             await createUserWithEmailAndPassword(auth, finalEmail, finalPw);
-          } catch (regErr) {
-            setErrorMsg("접속 실패. 비밀번호를 다시 확인해 주세요.");
+          }
+        } catch (err) {
+          console.error(err.code);
+          if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+            setErrorMsg("아이디 또는 비밀번호가 일치하지 않습니다.");
+          } else if (err.code === 'auth/email-already-in-use') {
+            setErrorMsg("이미 등록된 아이디입니다. 로그인 모드로 시도하세요.");
+          } else {
+            setErrorMsg("접속 중 오류가 발생했습니다. (다시 시도해 주세요)");
           }
         }
       };
 
       const addArchive = async (e) => {
         e.preventDefault();
-        if(!newFileName || !newFileUrl) return;
+        if(!newFileName || !newFileUrl || !user) return;
         await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'archives'), {
           name: newFileName, url: newFileUrl, createdAt: Date.now()
         });
@@ -119,55 +139,72 @@
 
       const addNote = async (e) => {
         e.preventDefault();
-        if(!newNoteTitle.trim()) return;
+        if(!newNoteTitle.trim() || !user) return;
         await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'notes'), {
           title: newNoteTitle, content: newNoteContent, createdAt: Date.now()
         });
         setNewNoteTitle(''); setNewNoteContent('');
       };
 
-      if (loading) return <div className="h-screen flex items-center justify-center font-bold text-blue-600">시스템 가동 중...</div>;
+      if (loading) return <div className="h-screen flex items-center justify-center font-bold text-blue-600 bg-[#f8fafc]">시스템 가동 중...</div>;
 
       if (!user) {
         return (
           <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center p-4">
-            <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-10 border border-gray-100">
+            <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-10 border border-gray-100 transition-all">
               <div className="flex justify-center mb-6">
-                <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-200">
-                  <Beaker size={36} color="white"/>
+                <div className="p-4 bg-blue-600 rounded-2xl shadow-lg shadow-blue-200">
+                  <Beaker size={40} color="white"/>
                 </div>
               </div>
-              <h1 className="text-2xl font-black text-center text-[#1e293b] mb-1">태준실험실</h1>
-              <p className="text-center text-slate-400 mb-10 text-sm font-medium tracking-tight">자료관리시스템에 접속합니다</p>
+              <h1 className="text-3xl font-black text-center text-[#1e293b] mb-1">태준실험실</h1>
+              <p className="text-center text-slate-400 mb-10 text-sm font-medium tracking-tight">
+                {authMode === 'login' ? '자료관리시스템 로그인' : '연구원 신규 등록'}
+              </p>
               
-              <form onSubmit={handleLogin} className="space-y-6">
+              <form onSubmit={handleAuth} className="space-y-6">
                 <div>
-                  <label className="text-xs font-black text-slate-400 uppercase ml-1 tracking-widest">실험실 ID</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1 tracking-[0.2em]">실험실 ID</label>
                   <input 
                     type="text" 
                     value={loginId} 
                     onChange={e=>setLoginId(e.target.value)} 
-                    className="w-full border border-slate-200 rounded-xl p-4 mt-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-semibold" 
-                    placeholder="ID 입력 (ehztl424)"
+                    className="w-full border border-slate-200 rounded-2xl p-4 mt-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold placeholder:text-slate-300" 
+                    placeholder="ehztl424"
                     required 
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-black text-slate-400 uppercase ml-1 tracking-widest">비밀번호</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1 tracking-[0.2em]">비밀번호</label>
                   <input 
                     type="password" 
                     value={loginPw} 
                     onChange={e=>setLoginPw(e.target.value)} 
-                    className="w-full border border-slate-200 rounded-xl p-4 mt-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-semibold tracking-[0.3em]" 
-                    placeholder="••••••"
+                    className="w-full border border-slate-200 rounded-2xl p-4 mt-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold tracking-[0.4em] placeholder:tracking-normal placeholder:text-slate-300" 
+                    placeholder="141592"
                     required 
                   />
                 </div>
-                {errorMsg && <p className="text-red-500 text-xs text-center font-bold bg-red-50 py-2 rounded-lg">{errorMsg}</p>}
-                <button className="w-full bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-black py-4 rounded-xl transition-all shadow-xl shadow-blue-100 text-lg">
-                  시스템 로그인
+                
+                {errorMsg && (
+                  <div className="bg-red-50 text-red-500 text-xs text-center font-bold py-3 px-4 rounded-xl animate-shake">
+                    {errorMsg}
+                  </div>
+                )}
+
+                <button className="w-full bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-black py-4 rounded-2xl transition-all shadow-xl shadow-blue-100 text-lg active:scale-95">
+                  {authMode === 'login' ? '시스템 로그인' : '연구원 등록 완료'}
                 </button>
               </form>
+
+              <div className="mt-8 text-center">
+                <button 
+                  onClick={() => { setAuthMode(authMode === 'login' ? 'signup' : 'login'); setErrorMsg(''); }}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors underline underline-offset-4"
+                >
+                  {authMode === 'login' ? '처음이신가요? 연구원 등록하기' : '이미 계정이 있나요? 로그인하기'}
+                </button>
+              </div>
             </div>
           </div>
         );
@@ -182,22 +219,22 @@
               <h1 className="text-xl font-black tracking-tight uppercase">Taejun <span className="text-blue-400">Lab</span></h1>
             </div>
             
-            <nav className="flex-1 space-y-1.5">
-              <button onClick={()=>setActiveTab('archives')} className={`w-full flex items-center gap-3 px-5 py-4 rounded-xl transition-all font-bold ${activeTab === 'archives' ? 'bg-blue-600 shadow-lg text-white' : 'text-slate-400 hover:bg-slate-800'}`}>
+            <nav className="flex-1 space-y-2">
+              <button onClick={()=>setActiveTab('archives')} className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all font-bold ${activeTab === 'archives' ? 'bg-blue-600 shadow-lg text-white' : 'text-slate-400 hover:bg-slate-800'}`}>
                 <FileText size={20}/> <span>자료 보관소</span>
               </button>
-              <button onClick={()=>setActiveTab('notes')} className={`w-full flex items-center gap-3 px-5 py-4 rounded-xl transition-all font-bold ${activeTab === 'notes' ? 'bg-blue-600 shadow-lg text-white' : 'text-slate-400 hover:bg-slate-800'}`}>
+              <button onClick={()=>setActiveTab('notes')} className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl transition-all font-bold ${activeTab === 'notes' ? 'bg-blue-600 shadow-lg text-white' : 'text-slate-400 hover:bg-slate-800'}`}>
                 <Beaker size={20} color="currentColor"/> <span>업무 일지</span>
               </button>
             </nav>
 
             <div className="mt-auto pt-6 border-t border-slate-700/50">
               <div className="flex items-center gap-3 px-3 mb-5">
-                <div className="w-9 h-9 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 font-black text-xs border border-blue-500/20">TJ</div>
+                <div className="w-10 h-10 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-400 font-black text-xs border border-blue-500/10">TJ</div>
                 <div className="text-xs text-slate-400 font-bold truncate flex-1 tracking-tight">{user.email.split('@')[0]}</div>
               </div>
-              <button onClick={()=>signOut(auth)} className="w-full flex items-center justify-center gap-2 bg-slate-800/50 hover:bg-red-500/10 hover:text-red-400 text-slate-400 py-3.5 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest border border-slate-700/50">
-                <LogOut size={14}/> Log Out
+              <button onClick={()=>signOut(auth)} className="w-full flex items-center justify-center gap-2 bg-slate-800/50 hover:bg-red-500/10 hover:text-red-400 text-slate-400 py-4 rounded-2xl transition-all text-[10px] font-black uppercase tracking-widest border border-slate-700/50">
+                <LogOut size={14}/> Sign Out
               </button>
             </div>
           </aside>
@@ -207,53 +244,62 @@
             {activeTab === 'archives' ? (
               <div className="max-w-5xl mx-auto">
                 <div className="mb-10">
-                  <h2 className="text-3xl font-black text-slate-800 tracking-tight">자료 보관소</h2>
-                  <p className="text-slate-500 mt-2 font-semibold">클라우드에 등록된 주요 서류 및 링크입니다.</p>
+                  <h2 className="text-4xl font-black text-slate-800 tracking-tight">자료 보관소</h2>
+                  <p className="text-slate-500 mt-2 font-bold text-lg">클라우드에 등록된 주요 서류 및 링크입니다.</p>
                 </div>
 
-                <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200/60 p-8 mb-10">
-                  <h3 className="text-xs font-black text-slate-400 mb-6 uppercase tracking-[0.2em]">새 자료 등록</h3>
-                  <form onSubmit={addArchive} className="flex flex-col md:flex-row gap-4">
-                    <input type="text" placeholder="자료 명칭" value={newFileName} onChange={e=>setNewFileName(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold placeholder:text-slate-300" required />
-                    <input type="url" placeholder="URL 링크 (드라이브 등)" value={newFileUrl} onChange={e=>setNewFileUrl(e.target.value)} className="flex-[2] bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold placeholder:text-slate-300" required />
-                    <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl px-8 py-4 transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-2">
-                      <Plus size={20}/> 등록
+                <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200/60 p-10 mb-10">
+                  <h3 className="text-[10px] font-black text-slate-400 mb-8 uppercase tracking-[0.3em]">신규 자료 마스터 등록</h3>
+                  <form onSubmit={addArchive} className="flex flex-col lg:flex-row gap-5">
+                    <input type="text" placeholder="자료 명칭" value={newFileName} onChange={e=>setNewFileName(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4.5 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold placeholder:text-slate-300 shadow-inner" required />
+                    <input type="url" placeholder="URL 링크 (구글 드라이브 등)" value={newFileUrl} onChange={e=>setNewFileUrl(e.target.value)} className="flex-[2] bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4.5 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold placeholder:text-slate-300 shadow-inner" required />
+                    <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl px-10 py-4.5 transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-2 active:scale-95 whitespace-nowrap">
+                      <Plus size={22}/> 자료 등록
                     </button>
                   </form>
                 </div>
 
-                <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200/60 overflow-hidden">
+                <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200/60 overflow-hidden">
                   <table className="w-full text-left">
-                    <thead className="bg-slate-50/50 border-b border-slate-100">
+                    <thead className="bg-slate-50/80 border-b border-slate-100">
                       <tr>
-                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">파일명</th>
-                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">등록일</th>
-                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">관리</th>
+                        <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">파일명칭 / 구분</th>
+                        <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">등록 일자</th>
+                        <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">관리 액션</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {archives.map(item => (
-                        <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group">
-                          <td className="px-8 py-6">
-                            <div className="flex items-center gap-4">
-                              <div className="p-3 bg-slate-100 rounded-xl text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600 transition-all"><FileText size={20}/></div>
-                              <span className="font-bold text-slate-700">{item.name}</span>
+                        <tr key={item.id} className="hover:bg-blue-50/40 transition-all group">
+                          <td className="px-10 py-7">
+                            <div className="flex items-center gap-5">
+                              <div className="p-3.5 bg-slate-100 rounded-2xl text-slate-400 group-hover:bg-white group-hover:text-blue-600 group-hover:shadow-md transition-all shadow-sm"><FileText size={22}/></div>
+                              <span className="font-extrabold text-slate-700 text-lg tracking-tight">{item.name}</span>
                             </div>
                           </td>
-                          <td className="px-8 py-6 text-sm text-slate-400 font-bold">{new Date(item.createdAt).toLocaleDateString()}</td>
-                          <td className="px-8 py-6 text-right">
-                            <div className="flex justify-end gap-3">
-                              <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-600 hover:text-white hover:bg-blue-600 font-bold text-sm bg-blue-50 px-5 py-2.5 rounded-xl transition-all border border-blue-100">
-                                <ExternalLink size={14}/> 열기
+                          <td className="px-10 py-7 text-sm text-slate-400 font-bold text-center tracking-tighter">{new Date(item.createdAt).toLocaleDateString()}</td>
+                          <td className="px-10 py-7 text-right">
+                            <div className="flex justify-end gap-4">
+                              <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-blue-600 hover:text-white hover:bg-blue-600 font-black text-xs bg-blue-50 px-6 py-3 rounded-2xl transition-all border border-blue-100 shadow-sm active:scale-90">
+                                <ExternalLink size={14}/> 링크 열기
                               </a>
-                              <button onClick={()=>confirm("삭제하시겠습니까?") && deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'archives', item.id))} className="text-slate-300 hover:text-red-500 p-2 transition-all">
-                                <Trash size={20}/>
+                              <button onClick={()=>confirm("이 자료를 영구 삭제하시겠습니까?") && deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'archives', item.id))} className="text-slate-200 hover:text-red-500 p-2 transition-all active:rotate-12">
+                                <Trash size={22}/>
                               </button>
                             </div>
                           </td>
                         </tr>
                       ))}
-                      {archives.length === 0 && <tr><td colSpan="3" className="px-8 py-32 text-center text-slate-300 font-bold italic">자료 보관함이 비어 있습니다.</td></tr>}
+                      {archives.length === 0 && (
+                        <tr>
+                          <td colSpan="3" className="px-10 py-40 text-center">
+                            <div className="flex flex-col items-center gap-4 text-slate-300">
+                              <FileText size={48} />
+                              <p className="font-bold text-xl italic">현재 보관된 데이터가 없습니다.</p>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -261,34 +307,40 @@
             ) : (
               <div className="max-w-5xl mx-auto">
                 <div className="mb-10">
-                  <h2 className="text-3xl font-black text-slate-800 tracking-tight">업무 일지</h2>
-                  <p className="text-slate-500 mt-2 font-semibold">중요한 업무 메모와 연구 기록입니다.</p>
+                  <h2 className="text-4xl font-black text-slate-800 tracking-tight">업무 일지</h2>
+                  <p className="text-slate-500 mt-2 font-bold text-lg">중요한 업무 흐름과 연구 기록을 보관합니다.</p>
                 </div>
 
-                <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200/60 p-8 mb-10">
-                  <h3 className="text-xs font-black text-slate-400 mb-6 uppercase tracking-[0.2em]">새 일지 작성</h3>
-                  <form onSubmit={addNote} className="space-y-4">
-                    <input type="text" placeholder="일지 제목" value={newNoteTitle} onChange={e=>setNewNoteTitle(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold placeholder:text-slate-300" required />
-                    <textarea placeholder="연구 내용을 기록하세요..." value={newNoteContent} onChange={e=>setNewNoteContent(e.target.value)} rows="5" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold placeholder:text-slate-300 resize-none" />
+                <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200/60 p-10 mb-10">
+                  <h3 className="text-[10px] font-black text-slate-400 mb-8 uppercase tracking-[0.3em]">새 로그 리포트 작성</h3>
+                  <form onSubmit={addNote} className="space-y-5">
+                    <input type="text" placeholder="일지 제목 (날짜 또는 프로젝트 명칭)" value={newNoteTitle} onChange={e=>setNewNoteTitle(e.target.value)} className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-7 py-5 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-black text-lg placeholder:text-slate-300 shadow-inner" required />
+                    <textarea placeholder="상세 내용을 기록하세요..." value={newNoteContent} onChange={e=>setNewNoteContent(e.target.value)} rows="6" className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-7 py-5 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-bold placeholder:text-slate-300 resize-none shadow-inner" />
                     <div className="flex justify-end">
-                      <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl px-10 py-4 transition-all shadow-xl shadow-blue-100 flex items-center gap-2">
-                        <Plus size={20}/> 일지 저장
+                      <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl px-12 py-5 transition-all shadow-xl shadow-blue-100 flex items-center gap-3 active:scale-95">
+                        <Plus size={22}/> 데이터 저장
                       </button>
                     </div>
                   </form>
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-8 md:grid-cols-2">
                   {notes.map(note => (
-                    <div key={note.id} className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm group hover:border-blue-200 transition-all">
-                      <div className="flex justify-between items-start mb-4">
-                        <h3 className="font-black text-slate-800 text-xl tracking-tight">{note.title}</h3>
-                        <button onClick={()=>deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'notes', note.id))} className="text-slate-200 hover:text-red-500 transition-all"><Trash size={18}/></button>
+                    <div key={note.id} className="bg-white border border-slate-200 rounded-[2.5rem] p-10 shadow-sm group hover:border-blue-300 transition-all hover:shadow-xl hover:shadow-blue-900/5 relative">
+                      <div className="flex justify-between items-start mb-6">
+                        <h3 className="font-black text-slate-800 text-2xl tracking-tighter leading-tight flex-1">{note.title}</h3>
+                        <button onClick={()=>confirm("일지를 삭제하시겠습니까?") && deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'notes', note.id))} className="text-slate-200 hover:text-red-500 transition-all p-2"><Trash size={20}/></button>
                       </div>
-                      <p className="text-slate-500 leading-relaxed font-medium whitespace-pre-wrap mb-6">{note.content}</p>
-                      <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{new Date(note.createdAt).toLocaleString()}</div>
+                      <div className="h-[2px] w-12 bg-blue-500 mb-6 group-hover:w-20 transition-all duration-500"></div>
+                      <p className="text-slate-500 leading-relaxed font-bold whitespace-pre-wrap mb-10 text-lg">{note.content}</p>
+                      <div className="absolute bottom-10 left-10 text-[10px] font-black text-slate-300 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-full">{new Date(note.createdAt).toLocaleString()}</div>
                     </div>
                   ))}
+                  {notes.length === 0 && (
+                    <div className="col-span-full py-40 text-center bg-white rounded-[2.5rem] border border-dashed border-slate-200">
+                       <p className="font-black text-slate-300 text-2xl italic tracking-tighter">작성된 업무 일지가 없습니다.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -300,5 +352,28 @@
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
   </script>
+  <style>
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+    .animate-shake {
+      animation: shake 0.3s ease-in-out;
+    }
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #e2e8f0;
+      border-radius: 20px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #cbd5e1;
+    }
+  </style>
 </body>
 </html>

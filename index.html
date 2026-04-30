@@ -5,13 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>태준실험실 - 전문 자료관리시스템</title>
   
-  <!-- 디자인 및 라이브러리 -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- Firebase Compat (최강의 호환성 버전) -->
+  <!-- Firebase Compat (가장 안정적인 라이브러리 조합) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -23,25 +22,26 @@
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 20px; }
-    .notion-input:focus::placeholder { color: transparent; }
     
-    /* 로딩 스피너 커스텀 */
     .spinner {
       border: 3px solid rgba(0, 0, 0, 0.1);
-      width: 24px;
-      height: 24px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       border-left-color: #2563eb;
       animation: spin 1s linear infinite;
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* 노션 스타일 입력창 커스텀 */
+    .notion-item:focus-within { background-color: #f1f5f9; border-radius: 4px; }
   </style>
 </head>
 <body class="bg-[#f8fafc] text-slate-800 font-sans antialiased">
   <div id="root">
-    <div class="h-screen flex flex-col items-center justify-center bg-slate-50">
-      <div class="spinner mb-4" style="width: 40px; height: 40px;"></div>
-      <p class="text-slate-400 font-bold animate-pulse uppercase tracking-widest text-xs">System Booting...</p>
+    <div class="h-screen flex flex-col items-center justify-center bg-white">
+      <div class="spinner mb-4"></div>
+      <p class="text-slate-400 font-bold animate-pulse text-xs tracking-widest uppercase">System Initializing...</p>
     </div>
   </div>
 
@@ -55,24 +55,28 @@
       appId: "1:1064401778915:web:0cf6b5bf131c0c75276dd6"
     };
     
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-    const storage = firebase.storage();
-    const appId = 'taejun-lab';
+    // 앱 초기화 에러 방지
+    let auth, db, storage;
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+      auth = firebase.auth();
+      db = firebase.firestore();
+      storage = firebase.storage();
+    } catch (e) {
+      console.error("Firebase Init Error", e);
+    }
 
     const { useState, useEffect, useRef } = React;
 
     const Icons = {
-      Beaker: ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 3h15"/><path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3"/><path d="M6 14h12"/></svg>,
-      FileText: ({size=20, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>,
-      Checklist: ({size=20, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="m9 12 2 2 4-4"/></svg>,
-      Trash: ({size=18, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
-      LogOut: ({size=18, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
+      Beaker: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 3h15"/><path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3"/><path d="M6 14h12"/></svg>,
+      File: ({size=20}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>,
+      Check: ({size=20}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="m9 12 2 2 4-4"/></svg>,
+      Trash: ({size=18}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
+      LogOut: ({size=18}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
       Plus: ({size=18}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
       Menu: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,
-      Upload: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
-      FilePdf: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15h1a1.5 1.5 0 0 0 0-3H9v4Z"/><path d="M5 12v4"/><path d="M17 12h-2v4"/></svg>
+      Cloud: ({size=32}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="M16 16l-4-4-4 4"/></svg>
     };
 
     function App() {
@@ -91,24 +95,26 @@
       const [isUploading, setIsUploading] = useState(false);
       const [isDragging, setIsDragging] = useState(false);
 
+      const appId = 'taejun-lab';
+
       useEffect(() => {
         const unsub = auth.onAuthStateChanged((u) => { 
           setUser(u); 
           setLoading(false); 
         });
-        return () => unsub();
+        // 5초 후에도 로딩이 안 풀리면 강제로 로딩 해제 (네트워크 오류 대비)
+        const timer = setTimeout(() => setLoading(false), 5000);
+        return () => { unsub(); clearTimeout(timer); };
       }, []);
 
       useEffect(() => {
         if (!user) return;
         const userPath = `artifacts/${appId}/users/${user.uid}`;
         
-        // 자료보관소 구독
         const unsubA = db.collection(`${userPath}/archives`).onSnapshot(snap => {
           setArchives(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.createdAt - a.createdAt));
         });
 
-        // 체크리스트 주차 목록 구독
         const unsubC = db.collection(`${userPath}/checklists`).onSnapshot(snap => {
           const list = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.order - a.order);
           setWeeklyChecklists(list);
@@ -125,11 +131,11 @@
         try {
           await auth.signInWithEmailAndPassword(finalEmail, loginPw);
         } catch (err) {
-          setErrorMsg("접속 정보가 일치하지 않습니다.");
+          setErrorMsg("ID 또는 비밀번호가 올바르지 않습니다.");
         }
       };
 
-      // --- Checklist Logic ---
+      // --- 체크리스트 주차 관리 ---
       const addNewWeek = async () => {
         const weekName = prompt("주차 정보를 입력하세요 (예: 4월 5주차)");
         if (!weekName) return;
@@ -142,7 +148,7 @@
         });
       };
 
-      const updateItems = async (weekId, newItems) => {
+      const updateChecklist = async (weekId, newItems) => {
         const userPath = `artifacts/${appId}/users/${user.uid}`;
         await db.doc(`${userPath}/checklists/${weekId}`).update({ items: newItems });
       };
@@ -151,10 +157,10 @@
         const week = weeklyChecklists.find(w => w.id === weekId);
         const newItems = [...week.items];
         newItems[index][field] = value;
-        updateItems(weekId, newItems);
+        updateChecklist(weekId, newItems);
       };
 
-      const handleChecklistKeyDown = (e, weekId, index) => {
+      const handleKeyDown = (e, weekId, index) => {
         const week = weeklyChecklists.find(w => w.id === weekId);
         let newItems = [...week.items];
         const item = newItems[index];
@@ -163,29 +169,26 @@
           e.preventDefault();
           const newItem = { id: Math.random().toString(36).substr(2, 9), text: '', completed: false, level: item.level, bold: false };
           newItems.splice(index + 1, 0, newItem);
-          updateItems(weekId, newItems);
-          setTimeout(() => document.getElementById(`check-input-${index + 1}`)?.focus(), 50);
+          updateChecklist(weekId, newItems);
+          setTimeout(() => document.getElementById(`input-${index + 1}`)?.focus(), 50);
         } else if (e.key === 'Tab') {
           e.preventDefault();
-          if (!e.shiftKey) {
-            if (item.level < 4) item.level += 1;
-          } else {
-            if (item.level > 0) item.level -= 1;
-          }
-          updateItems(weekId, newItems);
+          if (!e.shiftKey) { if (item.level < 4) item.level += 1; }
+          else { if (item.level > 0) item.level -= 1; }
+          updateChecklist(weekId, newItems);
         } else if (e.key === 'Backspace' && item.text === '' && newItems.length > 1) {
           e.preventDefault();
           newItems.splice(index, 1);
-          updateItems(weekId, newItems);
-          setTimeout(() => document.getElementById(`check-input-${index - 1}`)?.focus(), 50);
+          updateChecklist(weekId, newItems);
+          setTimeout(() => document.getElementById(`input-${index - 1}`)?.focus(), 50);
         } else if (e.ctrlKey && (e.key === 'b' || e.key === 'B')) {
           e.preventDefault();
           item.bold = !item.bold;
-          updateItems(weekId, newItems);
+          updateChecklist(weekId, newItems);
         }
       };
 
-      // --- File Upload Logic ---
+      // --- 파일 업로드 (PDF 포함) ---
       const uploadFile = async (file) => {
         if (!file || !user) return;
         setIsUploading(true);
@@ -202,20 +205,14 @@
             size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
             createdAt: Date.now()
           });
-          alert("파일 업로드 성공!");
+          alert("파일 전송 완료!");
         } catch (err) {
           console.error(err);
-          alert("파일 업로드 실패: Firebase Storage 요금제(Blaze) 업그레이드 또는 보안 규칙 설정을 확인해 주세요.");
+          alert("업로드 실패: 파이어베이스 스토리지 설정을 확인해 주세요. (Blaze 요금제 전환 필요)");
         } finally {
           setIsUploading(false);
           setIsDragging(false);
         }
-      };
-
-      const onDrop = (e) => {
-        e.preventDefault();
-        const file = e.dataTransfer.files[0];
-        if (file) uploadFile(file);
       };
 
       if (loading) return null;
@@ -225,24 +222,16 @@
           <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6">
             <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl p-10 border border-white">
               <div className="flex justify-center mb-8">
-                <div className="p-4 bg-blue-600 rounded-2xl shadow-xl shadow-blue-200">
-                  <Icons.Beaker size={40} color="white"/>
-                </div>
+                <div className="p-4 bg-blue-600 rounded-2xl shadow-xl shadow-blue-200"><Icons.Beaker size={40} color="white"/></div>
               </div>
               <h1 className="text-2xl font-black text-center text-slate-800 mb-1 tracking-tighter uppercase leading-none">Taejun Lab</h1>
-              <p className="text-center text-slate-400 mb-10 text-[10px] font-bold tracking-[0.3em] uppercase tracking-widest">Private Access Only</p>
+              <p className="text-center text-slate-400 mb-10 text-[10px] font-bold tracking-[0.3em] uppercase">Private Console</p>
               
               <form onSubmit={handleLogin} className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest block">Identity ID</label>
-                  <input type="text" value={loginId} onChange={e=>setLoginId(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold" required />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest block">Security Key</label>
-                  <input type="password" value={loginPw} onChange={e=>setLoginPw(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold" required />
-                </div>
+                <input type="text" value={loginId} onChange={e=>setLoginId(e.target.value)} placeholder="Researcher ID" className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold" required />
+                <input type="password" value={loginPw} onChange={e=>setLoginPw(e.target.value)} placeholder="Security Key" className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold" required />
                 {errorMsg && <div className="bg-red-50 text-red-500 text-[11px] text-center font-bold py-3 px-4 rounded-xl animate-shake">{errorMsg}</div>}
-                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl transition-all shadow-xl shadow-blue-200 text-base active:scale-95 uppercase tracking-widest mt-4">Login System</button>
+                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl transition-all shadow-xl shadow-blue-200 text-base active:scale-95 uppercase tracking-widest mt-4">Login</button>
               </form>
             </div>
           </div>
@@ -253,188 +242,95 @@
         <div className="min-h-screen flex flex-col md:flex-row bg-[#f8fafc]">
           {/* Mobile Header */}
           <header className="md:hidden flex items-center justify-between p-4 bg-[#1e293b] text-white sticky top-0 z-50">
-            <div className="flex items-center gap-2">
-              <Icons.Beaker size={18} color="white"/>
-              <span className="font-black text-base uppercase tracking-tighter">Lab Dashboard</span>
-            </div>
-            <button onClick={()=>setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-slate-700 rounded-lg">
-              <Icons.Menu size={22}/>
-            </button>
+            <div className="flex items-center gap-2"><Icons.Beaker size={18} color="white"/><span className="font-black text-base uppercase tracking-tighter">Lab</span></div>
+            <button onClick={()=>setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-slate-700 rounded-lg"><Icons.Menu size={22}/></button>
           </header>
 
           {/* Sidebar */}
           <aside className={`${sidebarOpen ? 'flex' : 'hidden'} md:flex fixed md:relative z-40 inset-0 md:inset-auto w-full md:w-64 bg-[#1e293b] text-white p-5 flex-col shadow-2xl transition-all`}>
-            <div className="flex items-center justify-between mb-10 mt-2">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-600 rounded-xl"><Icons.Beaker size={22} color="white"/></div>
-                <h1 className="text-lg font-black tracking-tighter uppercase">Taejun Lab</h1>
-              </div>
-              <button onClick={()=>setSidebarOpen(false)} className="md:hidden p-2 text-slate-400"><Icons.Trash size={18}/></button>
+            <div className="flex items-center gap-3 mb-12 mt-2">
+              <div className="p-2 bg-blue-600 rounded-xl"><Icons.Beaker size={22} color="white"/></div>
+              <h1 className="text-lg font-black tracking-tighter uppercase">Taejun Lab</h1>
             </div>
             
             <nav className="flex-1 space-y-1.5">
               <button onClick={()=>{setActiveTab('checklist'); setSidebarOpen(false);}} className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-xl transition-all font-bold text-sm ${activeTab === 'checklist' ? 'bg-blue-600 shadow-lg text-white' : 'text-slate-400 hover:bg-slate-800'}`}>
-                <Icons.Checklist size={18}/> <span>체크리스트</span>
+                <Icons.Check size={18}/> <span>체크리스트</span>
               </button>
               <button onClick={()=>{setActiveTab('archives'); setSidebarOpen(false);}} className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-xl transition-all font-bold text-sm ${activeTab === 'archives' ? 'bg-blue-600 shadow-lg text-white' : 'text-slate-400 hover:bg-slate-800'}`}>
-                <Icons.FileText size={18}/> <span>자료 보관소</span>
+                <Icons.File size={18}/> <span>자료 보관소</span>
               </button>
             </nav>
 
-            <div className="mt-auto pt-6 border-t border-slate-700/50 text-[10px] text-slate-500 font-bold uppercase text-center mb-4 truncate">
-              User: {user.email.split('@')[0]}
-            </div>
-            <button onClick={()=>auth.signOut()} className="w-full flex items-center justify-center gap-2 bg-slate-800/40 hover:bg-red-500/10 hover:text-red-400 text-slate-400 py-3.5 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest border border-slate-700/50 active:scale-95">
-              <Icons.LogOut size={12}/> Sign Out
-            </button>
+            <div className="mt-auto pt-6 border-t border-slate-700/50 text-[10px] text-slate-500 font-bold uppercase text-center mb-4">User: {user.email.split('@')[0]}</div>
+            <button onClick={()=>auth.signOut()} className="w-full flex items-center justify-center gap-2 bg-slate-800/40 hover:bg-red-500/10 hover:text-red-400 text-slate-400 py-3.5 rounded-xl transition-all text-[10px] font-black uppercase border border-slate-700/50 active:scale-95"><Icons.LogOut size={12}/> Sign Out</button>
           </aside>
 
           {/* Main Area */}
-          <main className="flex-1 p-5 md:p-10 lg:p-16 overflow-y-auto">
+          <main className="flex-1 p-5 md:p-12 overflow-y-auto">
             {activeTab === 'checklist' ? (
               <div className="max-w-4xl mx-auto">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
                   <div>
-                    <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase">Work Checklist</h2>
-                    <p className="text-slate-400 mt-1 font-bold text-sm">노션 스타일 업무 동기화 리스트</p>
+                    <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase">Research Log</h2>
+                    <p className="text-slate-400 mt-1 font-bold text-sm leading-none">주차별 업무 동기화</p>
                   </div>
-                  <button onClick={addNewWeek} className="bg-blue-600 hover:bg-blue-700 text-white font-black px-6 py-3.5 rounded-xl shadow-lg shadow-blue-100 flex items-center gap-2 transition-all active:scale-95 text-sm">
-                    <Icons.Plus size={18}/> 주차 추가
-                  </button>
+                  <button onClick={addNewWeek} className="bg-blue-600 hover:bg-blue-700 text-white font-black px-6 py-3 rounded-xl shadow-lg shadow-blue-100 flex items-center gap-2 transition-all text-sm active:scale-95"><Icons.Plus size={18}/> 주차 추가</button>
                 </div>
 
-                {/* Week Tabs */}
                 <div className="flex flex-wrap gap-2 mb-8">
                   {weeklyChecklists.map(week => (
-                    <button 
-                      key={week.id} 
-                      onClick={()=>setSelectedWeekId(week.id)}
-                      className={`px-5 py-2.5 rounded-xl font-black text-[11px] transition-all border-2 ${selectedWeekId === week.id ? 'bg-[#1e293b] text-white border-[#1e293b]' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'}`}
-                    >
-                      {week.title}
-                    </button>
+                    <button key={week.id} onClick={()=>setSelectedWeekId(week.id)} className={`px-5 py-2.5 rounded-xl font-black text-[11px] transition-all border-2 ${selectedWeekId === week.id ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'}`}>{week.title}</button>
                   ))}
                 </div>
 
-                {/* Notion List View */}
                 {selectedWeekId && weeklyChecklists.find(w => w.id === selectedWeekId) && (
                   <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/40 border border-slate-100 p-8 md:p-12 relative group min-h-[500px]">
-                    <button 
-                      onClick={async () => {
-                        if(confirm("이 주차 데이터를 삭제하시겠습니까?")) {
-                          await db.doc(`artifacts/${appId}/users/${user.uid}/checklists/${selectedWeekId}`).delete();
-                          setSelectedWeekId(null);
-                        }
-                      }}
-                      className="absolute top-8 right-8 text-slate-200 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100 p-2"
-                    >
-                      <Icons.Trash size={18}/>
-                    </button>
-                    
-                    <h3 className="text-2xl font-black text-slate-800 mb-10 border-b-4 border-blue-600 inline-block pb-1 tracking-tighter uppercase">{weeklyChecklists.find(w => w.id === selectedWeekId).title}</h3>
+                    <button onClick={async () => confirm("삭제하시겠습니까?") && db.doc(`artifacts/${appId}/users/${user.uid}/checklists/${selectedWeekId}`).delete()} className="absolute top-8 right-8 text-slate-200 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"><Icons.Trash size={18}/></button>
+                    <h3 className="text-2xl font-black text-slate-800 mb-10 border-b-4 border-blue-600 inline-block pb-1 tracking-tighter">{weeklyChecklists.find(w => w.id === selectedWeekId).title}</h3>
                     
                     <div className="space-y-1">
                       {weeklyChecklists.find(w => w.id === selectedWeekId).items.map((item, idx) => (
-                        <div key={item.id} className="flex items-start group/item transition-all" style={{ marginLeft: `${item.level * 28}px` }}>
-                          <button 
-                            onClick={() => handleItemChange(selectedWeekId, idx, 'completed', !item.completed)}
-                            className={`mt-1.5 w-4.5 h-4.5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${item.completed ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-200 bg-white hover:border-blue-400'}`}
-                          >
+                        <div key={item.id} className="flex items-start group/item transition-all notion-item" style={{ marginLeft: `${item.level * 28}px` }}>
+                          <button onClick={() => handleItemChange(selectedWeekId, idx, 'completed', !item.completed)} className={`mt-1.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${item.completed ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-200 bg-white hover:border-blue-400'}`}>
                             {item.completed && <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>}
                           </button>
-                          <input 
-                            id={`check-input-${idx}`}
-                            type="text" 
-                            value={item.text}
-                            onChange={(e) => handleItemChange(selectedWeekId, idx, 'text', e.target.value)}
-                            onKeyDown={(e) => handleChecklistKeyDown(e, selectedWeekId, idx)}
-                            className={`flex-1 bg-transparent border-none outline-none px-3 py-1 text-base transition-all notion-input ${item.completed ? 'text-slate-300 line-through font-medium' : 'text-slate-700 font-bold'} ${item.bold ? 'font-black underline' : ''}`}
-                            placeholder="할 일 입력 (Enter: 줄 추가, Tab: 들여쓰기)"
-                            autoComplete="off"
-                          />
+                          <input id={`input-${idx}`} type="text" value={item.text} onChange={(e) => handleItemChange(selectedWeekId, idx, 'text', e.target.value)} onKeyDown={(e) => handleKeyDown(e, selectedWeekId, idx)} className={`flex-1 bg-transparent border-none outline-none px-3 py-1 text-base transition-all ${item.completed ? 'text-slate-300 line-through font-medium' : 'text-slate-700 font-bold'} ${item.bold ? 'font-black underline' : ''}`} placeholder="내용 입력..." autoComplete="off" />
                         </div>
                       ))}
-                    </div>
-
-                    {/* Shortcut Guide */}
-                    <div className="mt-16 pt-6 border-t border-slate-50 flex flex-wrap gap-4 text-[9px] font-black text-slate-300 uppercase tracking-widest">
-                      <div className="flex items-center gap-1.5"><span className="bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">Enter</span> 줄추가</div>
-                      <div className="flex items-center gap-1.5"><span className="bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">Tab</span> 들여쓰기</div>
-                      <div className="flex items-center gap-1.5"><span className="bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">Shift+Tab</span> 내어쓰기</div>
-                      <div className="flex items-center gap-1.5"><span className="bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">Ctrl+B</span> 볼드</div>
                     </div>
                   </div>
                 )}
               </div>
             ) : (
               <div className="max-w-5xl mx-auto">
-                <div className="mb-10">
-                  <h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase leading-none">Lab Archive</h2>
-                  <p className="text-slate-400 mt-2 font-bold text-lg">파일 드래그 앤 드롭 업로드 관리</p>
+                <div className="mb-10 text-center md:text-left">
+                  <h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase leading-none">Archives</h2>
+                  <p className="text-slate-400 mt-2 font-bold text-lg leading-none">드래그 앤 드롭 파일 클라우드</p>
                 </div>
 
-                {/* Drop Zone */}
-                <div 
-                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={onDrop}
-                  className={`bg-white rounded-[3rem] p-12 border-4 border-dashed transition-all mb-12 flex flex-col items-center justify-center text-center ${isDragging ? 'border-blue-600 bg-blue-50' : 'border-slate-100 hover:border-blue-300 shadow-sm'}`}
-                >
-                  <div className={`p-6 rounded-3xl mb-4 transition-all ${isUploading ? 'bg-slate-50' : 'bg-blue-50 text-blue-600'}`}>
-                    {isUploading ? <div className="spinner"></div> : <Icons.Upload size={32}/>}
-                  </div>
-                  <h3 className="text-xl font-black text-slate-800 mb-2">
-                    {isUploading ? "파일을 클라우드로 전송 중..." : "파일을 여기에 끌어다 놓으세요"}
-                  </h3>
-                  <p className="text-slate-400 font-bold text-xs mb-6 px-4">PDF, 이미지, 실험 데이터 등 무엇이든 가능합니다.</p>
-                  
-                  <label className="bg-[#1e293b] hover:bg-slate-800 text-white font-black px-8 py-3 rounded-xl cursor-pointer transition-all active:scale-95 text-xs">
-                    컴퓨터에서 선택하기
-                    <input type="file" className="hidden" onChange={(e) => uploadFile(e.target.files[0])} disabled={isUploading} />
-                  </label>
+                <div onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={(e) => { e.preventDefault(); uploadFile(e.dataTransfer.files[0]); }} className={`bg-white rounded-[3rem] p-12 border-4 border-dashed transition-all mb-12 flex flex-col items-center justify-center text-center ${isDragging ? 'border-blue-600 bg-blue-50' : 'border-slate-100 hover:border-blue-200'}`}>
+                  <div className={`p-6 rounded-3xl mb-4 transition-all ${isUploading ? 'bg-slate-50' : 'bg-blue-50 text-blue-600'}`}>{isUploading ? <div className="spinner"></div> : <Icons.Cloud size={32}/>}</div>
+                  <h3 className="text-xl font-black text-slate-800 mb-2">{isUploading ? "파일 전송 중..." : "PDF 또는 이미지를 이곳에 끌어다 놓으세요"}</h3>
+                  <label className="bg-[#1e293b] hover:bg-slate-800 text-white font-black px-8 py-3 rounded-xl cursor-pointer transition-all active:scale-95 text-xs mt-4">내 컴퓨터 탐색<input type="file" className="hidden" onChange={(e) => uploadFile(e.target.files[0])} disabled={isUploading} /></label>
                 </div>
 
-                {/* File List */}
-                <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200/60 overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left min-w-[600px]">
-                      <thead className="bg-slate-50/50 border-b border-slate-100">
-                        <tr>
-                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">파일명</th>
-                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">크기</th>
-                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">업로드일</th>
-                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">관리</th>
+                <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+                  <table className="w-full text-left min-w-[600px]">
+                    <thead className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      <tr><th className="px-8 py-5">파일명</th><th className="px-8 py-5 text-center">크기</th><th className="px-8 py-5 text-center">날짜</th><th className="px-8 py-5 text-right">옵션</th></tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {archives.map(item => (
+                        <tr key={item.id} className="hover:bg-blue-50/40 transition-all">
+                          <td className="px-8 py-6 flex items-center gap-4 font-extrabold text-base text-slate-700 tracking-tight"><Icons.File size={18} className="text-slate-400"/><span>{item.name}</span></td>
+                          <td className="px-8 py-6 text-xs text-slate-400 font-bold text-center">{item.size || 'N/A'}</td>
+                          <td className="px-8 py-6 text-xs text-slate-400 font-bold text-center uppercase">{new Date(item.createdAt).toLocaleDateString()}</td>
+                          <td className="px-8 py-6 text-right"><div className="flex justify-end gap-3"><a href={item.url} target="_blank" rel="noreferrer" className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white font-black text-[10px] px-6 py-2 rounded-xl transition-all border border-blue-100 shadow-sm">VIEW</a><button onClick={()=>confirm("삭제?") && db.doc(`artifacts/${appId}/users/${user.uid}/archives/${item.id}`).delete()} className="text-slate-200 hover:text-red-500 p-2"><Icons.Trash size={18}/></button></div></td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50">
-                        {archives.map(item => (
-                          <tr key={item.id} className="hover:bg-blue-50/40 transition-all group">
-                            <td className="px-8 py-6">
-                              <div className="flex items-center gap-4">
-                                <div className={`p-2 rounded-lg ${item.name.toLowerCase().endsWith('.pdf') ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-400'}`}>
-                                  {item.name.toLowerCase().endsWith('.pdf') ? <Icons.FilePdf size={20}/> : <Icons.FileText size={20}/>}
-                                </div>
-                                <span className="font-extrabold text-base text-slate-700 tracking-tight">{item.name}</span>
-                              </div>
-                            </td>
-                            <td className="px-8 py-6 text-xs text-slate-400 font-bold text-center tabular-nums">{item.size || 'N/A'}</td>
-                            <td className="px-8 py-6 text-xs text-slate-400 font-bold text-center tabular-nums">{new Date(item.createdAt).toLocaleDateString()}</td>
-                            <td className="px-8 py-6 text-right">
-                              <div className="flex justify-end gap-3">
-                                <a href={item.url} target="_blank" rel="noreferrer" className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white font-black text-[10px] px-6 py-2.5 rounded-xl transition-all border border-blue-100 uppercase tracking-widest flex items-center gap-2 shadow-sm">
-                                  Download
-                                </a>
-                                <button onClick={()=>confirm("파일을 삭제하시겠습니까?") && db.doc(`artifacts/${appId}/users/${user.uid}/archives/${item.id}`).delete()} className="text-slate-200 hover:text-red-500 transition-all p-2"><Icons.Trash size={18}/></button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                        {archives.length === 0 && (
-                          <tr><td colSpan="4" className="px-8 py-20 text-center text-slate-300 font-bold italic">보관된 자료가 없습니다.</td></tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}

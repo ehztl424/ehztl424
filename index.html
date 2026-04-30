@@ -1,454 +1,326 @@
-import React, { useState, useEffect } from 'react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, addDoc } from 'firebase/firestore';
-import { Beaker, ClipboardList, BookOpen, Trash2, Plus, RefreshCw, Terminal, CheckSquare } from 'lucide-react';
-
-// --- Firebase Initialization ---
-// (회원님의 고유 Firebase 설정으로 업데이트되었습니다.)
-const firebaseConfig = {
-  apiKey: "AIzaSyCfHF_0xj-9qdD-VcwDCv_gJtQhDtmvSXQ",
-  authDomain: "taejun-lab.firebaseapp.com",
-  projectId: "taejun-lab",
-  storageBucket: "taejun-lab.firebasestorage.app",
-  messagingSenderId: "1064401778915",
-  appId: "1:1064401778915:web:0cf6b5bf131c0c75276dd6"
-};
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'taejun-lab';
-
-export default function App() {
-  const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('logs');
-  const [logs, setLogs] = useState([]);
-  const [tasks, setTasks] = useState([]);
-  const [newLogTitle, setNewLogTitle] = useState('');
-  const [newLogContent, setNewLogContent] = useState('');
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [isSyncing, setIsSyncing] = useState(true);
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>태준실험실</title>
   
-  // 노션형 체크리스트를 위한 상태
-  const [checklist, setChecklist] = useState([{ id: 'init', text: '', completed: false }]);
+  <!-- 1. Tailwind CSS (디자인) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 2. React & ReactDOM (화면 구성) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- 3. Babel (React 코드 번역기) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  // --- Auth & Sync Setup ---
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          try {
-            await signInWithCustomToken(auth, __initial_auth_token);
-          } catch (tokenError) {
-            console.warn("커스텀 토큰 불일치 (개인 설정 사용 중). 익명 로그인으로 전환합니다.", tokenError);
-            await signInAnonymously(auth);
-          }
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (error) {
-        console.error("Auth error:", error);
+  <!-- 4. Firebase 라이브러리 연결 -->
+  <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js"
       }
-    };
-    initAuth();
-
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setIsSyncing(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // --- Data Fetching (Firestore) ---
-  useEffect(() => {
-    if (!user) return;
-
-    setIsSyncing(true);
-    const logsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'logs');
-    const tasksRef = collection(db, 'artifacts', appId, 'users', user.uid, 'tasks');
-
-    // 실험 일지(Logs) 구독
-    const unsubLogs = onSnapshot(logsRef, (snapshot) => {
-      const logsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // 클라이언트에서 최신순 정렬
-      logsData.sort((a, b) => b.createdAt - a.createdAt);
-      setLogs(logsData);
-      setIsSyncing(false);
-    }, (error) => {
-      console.error("Logs sync error:", error);
-      setIsSyncing(false);
-    });
-
-    // 프로토콜(Tasks) 구독
-    const unsubTasks = onSnapshot(tasksRef, (snapshot) => {
-      const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      tasksData.sort((a, b) => b.createdAt - a.createdAt);
-      setTasks(tasksData);
-    }, (error) => console.error("Tasks sync error:", error));
-
-    // 노션형 체크리스트 구독 (단일 문서로 전체 리스트 관리)
-    const checklistRef = doc(db, 'artifacts', appId, 'users', user.uid, 'system', 'notion_checklist');
-    const unsubChecklist = onSnapshot(checklistRef, (docSnap) => {
-      if (docSnap.exists() && docSnap.data().items) {
-        setChecklist(docSnap.data().items);
-      }
-    }, (error) => console.error("Checklist sync error:", error));
-
-    return () => {
-      unsubLogs();
-      unsubTasks();
-      unsubChecklist();
-    };
-  }, [user]);
-
-  // --- Handlers ---
-  const handleAddLog = async (e) => {
-    e.preventDefault();
-    if (!newLogTitle.trim() || !user) return;
-    
-    const logsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'logs');
-    await addDoc(logsRef, {
-      title: newLogTitle,
-      content: newLogContent,
-      createdAt: Date.now()
-    });
-    setNewLogTitle('');
-    setNewLogContent('');
-  };
-
-  const handleDeleteLog = async (id) => {
-    if (!user) return;
-    await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'logs', id));
-  };
-
-  const handleAddTask = async (e) => {
-    e.preventDefault();
-    if (!newTaskTitle.trim() || !user) return;
-
-    const tasksRef = collection(db, 'artifacts', appId, 'users', user.uid, 'tasks');
-    await addDoc(tasksRef, {
-      title: newTaskTitle,
-      completed: false,
-      createdAt: Date.now()
-    });
-    setNewTaskTitle('');
-  };
-
-  const handleToggleTask = async (id, currentStatus) => {
-    if (!user) return;
-    const taskRef = doc(db, 'artifacts', appId, 'users', user.uid, 'tasks', id);
-    await setDoc(taskRef, { completed: !currentStatus }, { merge: true });
-  };
-
-  const handleDeleteTask = async (id) => {
-    if (!user) return;
-    await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'tasks', id));
-  };
-
-  // --- 노션형 체크리스트 Handlers ---
-  const updateChecklistDb = async (newItems) => {
-    setChecklist(newItems); // 빠른 UI 반응을 위한 선반영
-    if (!user) return;
-    const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'system', 'notion_checklist');
-    await setDoc(ref, { items: newItems }, { merge: true });
-  };
-
-  const handleChecklistChange = (text, index) => {
-    const newItems = [...checklist];
-    newItems[index].text = text;
-    updateChecklistDb(newItems);
-  };
-
-  const handleChecklistToggle = (index) => {
-    const newItems = [...checklist];
-    newItems[index].completed = !newItems[index].completed;
-    updateChecklistDb(newItems);
-  };
-
-  const handleChecklistKeyDown = (e, index) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const newItems = [...checklist];
-      // 고유 ID 생성 (Enter 누를 때마다 새로운 줄 생성)
-      const newItem = { id: Date.now().toString(36) + Math.random().toString(36).substr(2), text: '', completed: false };
-      newItems.splice(index + 1, 0, newItem);
-      updateChecklistDb(newItems);
-      // 생성된 새 줄로 포커스 이동
-      setTimeout(() => document.getElementById(`check-${index + 1}`)?.focus(), 10);
-      
-    } else if (e.key === 'Backspace' && checklist[index].text === '') {
-      e.preventDefault();
-      if (checklist.length <= 1) return; // 마지막 한 줄은 삭제 방지
-      const newItems = [...checklist];
-      newItems.splice(index, 1);
-      updateChecklistDb(newItems);
-      // 지워지면 이전 줄로 포커스 이동
-      setTimeout(() => document.getElementById(`check-${index - 1}`)?.focus(), 10);
-      
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (index > 0) document.getElementById(`check-${index - 1}`)?.focus();
-      
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (index < checklist.length - 1) document.getElementById(`check-${index + 1}`)?.focus();
     }
-  };
+  </script>
+</head>
+<body class="bg-gray-950 text-gray-300">
+  <div id="root"></div>
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-950 text-emerald-500 flex items-center justify-center font-mono">
-        <div className="flex flex-col items-center animate-pulse">
-          <Beaker size={48} className="mb-4" />
-          <h1 className="text-xl">연구소 보안 시스템 접속 중...</h1>
-        </div>
-      </div>
-    );
-  }
+  <!-- 5. 실제 애플리케이션 코드 -->
+  <script type="text/babel" data-type="module">
+    import { initializeApp } from 'firebase/app';
+    import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+    import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc, addDoc } from 'firebase/firestore';
 
-  return (
-    <div className="min-h-screen bg-gray-950 text-gray-300 font-mono flex flex-col md:flex-row">
-      {/* Sidebar */}
-      <aside className="w-full md:w-64 bg-gray-900 border-r border-gray-800 p-4 flex flex-col">
-        <div className="flex items-center gap-3 mb-8 text-emerald-400">
-          <Beaker size={28} />
-          <h1 className="text-xl font-bold tracking-wider">태준실험실</h1>
-        </div>
+    const { useState, useEffect } = React;
 
-        <nav className="flex-1 space-y-2">
-          <button
-            onClick={() => setActiveTab('logs')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              activeTab === 'logs' ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800/50' : 'hover:bg-gray-800 text-gray-400'
-            }`}
-          >
-            <BookOpen size={18} />
-            <span>실험 일지 (Notes)</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('tasks')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              activeTab === 'tasks' ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800/50' : 'hover:bg-gray-800 text-gray-400'
-            }`}
-          >
-            <ClipboardList size={18} />
-            <span>프로토콜 (Tasks)</span>
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('checklists')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-              activeTab === 'checklists' ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800/50' : 'hover:bg-gray-800 text-gray-400'
-            }`}
-          >
-            <CheckSquare size={18} />
-            <span>노션 체크리스트</span>
-          </button>
-        </nav>
+    // --- 아이콘 컴포넌트 (외부 라이브러리 없이 직접 내장) ---
+    const Beaker = ({size=24}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 3h15"/><path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3"/><path d="M6 14h12"/></svg>;
+    const ClipboardList = ({size=24}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>;
+    const BookOpen = ({size=24}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
+    const Trash2 = ({size=24}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>;
+    const Plus = ({size=24}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>;
+    const RefreshCw = ({size=24, className=""}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>;
+    const TerminalIcon = ({size=24}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>;
+    const CheckSquare = ({size=24}) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>;
 
-        <div className="mt-auto pt-4 border-t border-gray-800 text-xs text-gray-500 flex items-center gap-2">
-          {isSyncing ? (
-            <RefreshCw size={14} className="animate-spin" />
-          ) : (
-            <Terminal size={14} />
-          )}
-          <span>{isSyncing ? '클라우드 동기화 중...' : '클라우드 연결 완료'}</span>
-        </div>
-      </aside>
+    // --- 회원님의 고유 Firebase 설정 ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyCfHF_0xj-9qdD-VcwDCv_gJtQhDtmvSXQ",
+      authDomain: "taejun-lab.firebaseapp.com",
+      projectId: "taejun-lab",
+      storageBucket: "taejun-lab.firebasestorage.app",
+      messagingSenderId: "1064401778915",
+      appId: "1:1064401778915:web:0cf6b5bf131c0c75276dd6"
+    };
+    
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const appId = 'taejun-lab'; // 깃허브용 고정 ID
 
-      {/* Main Content */}
-      <main className="flex-1 p-6 md:p-10 max-h-screen overflow-y-auto">
-        
-        {/* --- 실험 일지 (Logs) 탭 --- */}
-        {activeTab === 'logs' && (
-          <div className="max-w-4xl mx-auto">
-            <header className="mb-8 border-b border-gray-800 pb-4">
-              <h2 className="text-2xl font-bold text-emerald-400 flex items-center gap-2">
-                <BookOpen size={24} />
-                연구/업무 일지 기록
-              </h2>
-              <p className="text-sm text-gray-500 mt-2">입력한 데이터는 기기 간 실시간으로 동기화됩니다.</p>
-            </header>
+    function App() {
+      const [user, setUser] = useState(null);
+      const [activeTab, setActiveTab] = useState('logs');
+      const [logs, setLogs] = useState([]);
+      const [tasks, setTasks] = useState([]);
+      const [newLogTitle, setNewLogTitle] = useState('');
+      const [newLogContent, setNewLogContent] = useState('');
+      const [newTaskTitle, setNewTaskTitle] = useState('');
+      const [isSyncing, setIsSyncing] = useState(true);
+      
+      const [checklist, setChecklist] = useState([{ id: 'init', text: '', completed: false }]);
 
-            {/* 입력 폼 */}
-            <form onSubmit={handleAddLog} className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-8 shadow-lg">
-              <input
-                type="text"
-                placeholder="제목을 입력하세요 (예: 24년 4분기 프로젝트 기획안)"
-                value={newLogTitle}
-                onChange={(e) => setNewLogTitle(e.target.value)}
-                className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2 text-gray-200 mb-4 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-              />
-              <textarea
-                placeholder="상세 내용을 입력하세요... (클라우드에 안전하게 저장됩니다)"
-                value={newLogContent}
-                onChange={(e) => setNewLogContent(e.target.value)}
-                rows={4}
-                className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2 text-gray-200 mb-4 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 resize-none"
-              />
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={!newLogTitle.trim()}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Plus size={18} />
-                  기록 저장
-                </button>
-              </div>
-            </form>
+      // --- 로그인 및 동기화 설정 ---
+      useEffect(() => {
+        const initAuth = async () => {
+          try {
+            await signInAnonymously(auth); // 깔끔하게 익명 로그인만 수행하도록 변경
+          } catch (error) {
+            console.error("Auth error:", error);
+          }
+        };
+        initAuth();
 
-            {/* 목록 리스트 */}
-            <div className="grid gap-4 md:grid-cols-2">
-              {logs.map((log) => (
-                <div key={log.id} className="bg-gray-900 border border-gray-800 rounded-xl p-5 flex flex-col group hover:border-emerald-900 transition-colors">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-gray-200 text-lg truncate pr-4">{log.title}</h3>
-                    <button
-                      onClick={() => handleDeleteLog(log.id)}
-                      className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="삭제"
-                    >
-                      <Trash2 size={16} />
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+          setUser(currentUser);
+          setIsSyncing(false);
+        });
+
+        return () => unsubscribe();
+      }, []);
+
+      useEffect(() => {
+        if (!user) return;
+
+        setIsSyncing(true);
+        const logsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'logs');
+        const tasksRef = collection(db, 'artifacts', appId, 'users', user.uid, 'tasks');
+        const checklistRef = doc(db, 'artifacts', appId, 'users', user.uid, 'system', 'notion_checklist');
+
+        const unsubLogs = onSnapshot(logsRef, (snapshot) => {
+          const logsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          logsData.sort((a, b) => b.createdAt - a.createdAt);
+          setLogs(logsData);
+          setIsSyncing(false);
+        }, (error) => console.error("Logs sync error:", error));
+
+        const unsubTasks = onSnapshot(tasksRef, (snapshot) => {
+          const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          tasksData.sort((a, b) => b.createdAt - a.createdAt);
+          setTasks(tasksData);
+        }, (error) => console.error("Tasks sync error:", error));
+
+        const unsubChecklist = onSnapshot(checklistRef, (docSnap) => {
+          if (docSnap.exists() && docSnap.data().items) {
+            setChecklist(docSnap.data().items);
+          }
+        }, (error) => console.error("Checklist sync error:", error));
+
+        return () => {
+          unsubLogs();
+          unsubTasks();
+          unsubChecklist();
+        };
+      }, [user]);
+
+      // --- 핸들러 함수들 ---
+      const handleAddLog = async (e) => {
+        e.preventDefault();
+        if (!newLogTitle.trim() || !user) return;
+        const logsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'logs');
+        await addDoc(logsRef, { title: newLogTitle, content: newLogContent, createdAt: Date.now() });
+        setNewLogTitle('');
+        setNewLogContent('');
+      };
+
+      const handleDeleteLog = async (id) => {
+        if (!user) return;
+        await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'logs', id));
+      };
+
+      const handleAddTask = async (e) => {
+        e.preventDefault();
+        if (!newTaskTitle.trim() || !user) return;
+        const tasksRef = collection(db, 'artifacts', appId, 'users', user.uid, 'tasks');
+        await addDoc(tasksRef, { title: newTaskTitle, completed: false, createdAt: Date.now() });
+        setNewTaskTitle('');
+      };
+
+      const handleToggleTask = async (id, currentStatus) => {
+        if (!user) return;
+        const taskRef = doc(db, 'artifacts', appId, 'users', user.uid, 'tasks', id);
+        await setDoc(taskRef, { completed: !currentStatus }, { merge: true });
+      };
+
+      const handleDeleteTask = async (id) => {
+        if (!user) return;
+        await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'tasks', id));
+      };
+
+      const updateChecklistDb = async (newItems) => {
+        setChecklist(newItems);
+        if (!user) return;
+        const ref = doc(db, 'artifacts', appId, 'users', user.uid, 'system', 'notion_checklist');
+        await setDoc(ref, { items: newItems }, { merge: true });
+      };
+
+      const handleChecklistChange = (text, index) => {
+        const newItems = [...checklist];
+        newItems[index].text = text;
+        updateChecklistDb(newItems);
+      };
+
+      const handleChecklistToggle = (index) => {
+        const newItems = [...checklist];
+        newItems[index].completed = !newItems[index].completed;
+        updateChecklistDb(newItems);
+      };
+
+      const handleChecklistKeyDown = (e, index) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const newItems = [...checklist];
+          const newItem = { id: Date.now().toString(36) + Math.random().toString(36).substr(2), text: '', completed: false };
+          newItems.splice(index + 1, 0, newItem);
+          updateChecklistDb(newItems);
+          setTimeout(() => document.getElementById(`check-${index + 1}`)?.focus(), 10);
+        } else if (e.key === 'Backspace' && checklist[index].text === '') {
+          e.preventDefault();
+          if (checklist.length <= 1) return;
+          const newItems = [...checklist];
+          newItems.splice(index, 1);
+          updateChecklistDb(newItems);
+          setTimeout(() => document.getElementById(`check-${index - 1}`)?.focus(), 10);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (index > 0) document.getElementById(`check-${index - 1}`)?.focus();
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (index < checklist.length - 1) document.getElementById(`check-${index + 1}`)?.focus();
+        }
+      };
+
+      if (!user) {
+        return (
+          <div className="min-h-screen bg-gray-950 text-emerald-500 flex items-center justify-center font-mono">
+            <div className="flex flex-col items-center animate-pulse">
+              <div className="mb-4"><Beaker size={48} /></div>
+              <h1 className="text-xl">연구소 보안 시스템 접속 중...</h1>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-950 text-gray-300 font-mono flex flex-col md:flex-row">
+          <aside className="w-full md:w-64 bg-gray-900 border-r border-gray-800 p-4 flex flex-col">
+            <div className="flex items-center gap-3 mb-8 text-emerald-400">
+              <Beaker size={28} />
+              <h1 className="text-xl font-bold tracking-wider">태준실험실</h1>
+            </div>
+
+            <nav className="flex-1 space-y-2">
+              <button onClick={() => setActiveTab('logs')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'logs' ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800/50' : 'hover:bg-gray-800 text-gray-400'}`}>
+                <BookOpen size={18} /><span>실험 일지 (Notes)</span>
+              </button>
+              <button onClick={() => setActiveTab('tasks')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'tasks' ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800/50' : 'hover:bg-gray-800 text-gray-400'}`}>
+                <ClipboardList size={18} /><span>프로토콜 (Tasks)</span>
+              </button>
+              <button onClick={() => setActiveTab('checklists')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'checklists' ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800/50' : 'hover:bg-gray-800 text-gray-400'}`}>
+                <CheckSquare size={18} /><span>노션 체크리스트</span>
+              </button>
+            </nav>
+
+            <div className="mt-auto pt-4 border-t border-gray-800 text-xs text-gray-500 flex items-center gap-2">
+              {isSyncing ? <RefreshCw size={14} className="animate-spin" /> : <TerminalIcon size={14} />}
+              <span>{isSyncing ? '클라우드 동기화 중...' : '클라우드 연결 완료'}</span>
+            </div>
+          </aside>
+
+          <main className="flex-1 p-6 md:p-10 max-h-screen overflow-y-auto">
+            {activeTab === 'logs' && (
+              <div className="max-w-4xl mx-auto">
+                <header className="mb-8 border-b border-gray-800 pb-4">
+                  <h2 className="text-2xl font-bold text-emerald-400 flex items-center gap-2"><BookOpen size={24} />연구/업무 일지 기록</h2>
+                </header>
+                <form onSubmit={handleAddLog} className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-8 shadow-lg">
+                  <input type="text" placeholder="제목을 입력하세요" value={newLogTitle} onChange={(e) => setNewLogTitle(e.target.value)} className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2 text-gray-200 mb-4 focus:outline-none focus:border-emerald-500" />
+                  <textarea placeholder="상세 내용을 입력하세요..." value={newLogContent} onChange={(e) => setNewLogContent(e.target.value)} rows="4" className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-2 text-gray-200 mb-4 focus:outline-none focus:border-emerald-500 resize-none" />
+                  <div className="flex justify-end">
+                    <button type="submit" disabled={!newLogTitle.trim()} className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors disabled:opacity-50">
+                      <Plus size={18} />기록 저장
                     </button>
                   </div>
-                  <p className="text-gray-400 text-sm whitespace-pre-wrap flex-1 mb-4">
-                    {log.content || '내용 없음'}
-                  </p>
-                  <div className="text-xs text-gray-600 mt-auto">
-                    {new Date(log.createdAt).toLocaleString()}
-                  </div>
-                </div>
-              ))}
-              {logs.length === 0 && (
-                <div className="col-span-full text-center py-12 text-gray-600 border border-dashed border-gray-800 rounded-xl">
-                  저장된 기록이 없습니다. 새로운 아이디어를 입력해보세요.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* --- 프로토콜 (Tasks) 탭 --- */}
-        {activeTab === 'tasks' && (
-          <div className="max-w-3xl mx-auto">
-            <header className="mb-8 border-b border-gray-800 pb-4">
-              <h2 className="text-2xl font-bold text-emerald-400 flex items-center gap-2">
-                <ClipboardList size={24} />
-                진행 프로토콜 (할 일 목록)
-              </h2>
-            </header>
-
-            <form onSubmit={handleAddTask} className="flex gap-2 mb-8">
-              <input
-                type="text"
-                placeholder="새로운 할 일 입력..."
-                value={newTaskTitle}
-                onChange={(e) => setNewTaskTitle(e.target.value)}
-                className="flex-1 bg-gray-900 border border-gray-800 rounded-lg px-4 py-3 text-gray-200 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm"
-              />
-              <button
-                type="submit"
-                disabled={!newTaskTitle.trim()}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50"
-              >
-                추가
-              </button>
-            </form>
-
-            <div className="space-y-2">
-              {tasks.map((task) => (
-                <div 
-                  key={task.id} 
-                  className={`flex items-center justify-between p-4 rounded-lg border ${
-                    task.completed ? 'bg-gray-900/50 border-gray-800/50' : 'bg-gray-900 border-gray-800'
-                  }`}
-                >
-                  <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => handleToggleTask(task.id, task.completed)}>
-                    <div className={`w-5 h-5 rounded border flex items-center justify-center ${
-                      task.completed ? 'bg-emerald-500 border-emerald-500 text-gray-900' : 'border-gray-600'
-                    }`}>
-                      {task.completed && <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>}
+                </form>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {logs.map((log) => (
+                    <div key={log.id} className="bg-gray-900 border border-gray-800 rounded-xl p-5 flex flex-col group hover:border-emerald-900 transition-colors">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-bold text-gray-200 text-lg truncate pr-4">{log.title}</h3>
+                        <button onClick={() => handleDeleteLog(log.id)} className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={16} /></button>
+                      </div>
+                      <p className="text-gray-400 text-sm whitespace-pre-wrap flex-1 mb-4">{log.content || '내용 없음'}</p>
                     </div>
-                    <span className={`${task.completed ? 'text-gray-600 line-through' : 'text-gray-300'}`}>
-                      {task.title}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteTask(task.id)}
-                    className="text-gray-600 hover:text-red-400 p-2"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  ))}
                 </div>
-              ))}
-              {tasks.length === 0 && (
-                <div className="text-center py-8 text-gray-600">
-                  등록된 할 일이 없습니다.
+              </div>
+            )}
+
+            {activeTab === 'tasks' && (
+              <div className="max-w-3xl mx-auto">
+                <header className="mb-8 border-b border-gray-800 pb-4">
+                  <h2 className="text-2xl font-bold text-emerald-400 flex items-center gap-2"><ClipboardList size={24} />진행 프로토콜 (할 일 목록)</h2>
+                </header>
+                <form onSubmit={handleAddTask} className="flex gap-2 mb-8">
+                  <input type="text" placeholder="새로운 할 일 입력..." value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} className="flex-1 bg-gray-900 border border-gray-800 rounded-lg px-4 py-3 text-gray-200 focus:outline-none focus:border-emerald-500" />
+                  <button type="submit" disabled={!newTaskTitle.trim()} className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50">추가</button>
+                </form>
+                <div className="space-y-2">
+                  {tasks.map((task) => (
+                    <div key={task.id} className={`flex items-center justify-between p-4 rounded-lg border ${task.completed ? 'bg-gray-900/50 border-gray-800/50' : 'bg-gray-900 border-gray-800'}`}>
+                      <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => handleToggleTask(task.id, task.completed)}>
+                        <div className={`w-5 h-5 rounded border flex items-center justify-center ${task.completed ? 'bg-emerald-500 border-emerald-500 text-gray-900' : 'border-gray-600'}`}>
+                          {task.completed && <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>}
+                        </div>
+                        <span className={`${task.completed ? 'text-gray-600 line-through' : 'text-gray-300'}`}>{task.title}</span>
+                      </div>
+                      <button onClick={() => handleDeleteTask(task.id)} className="text-gray-600 hover:text-red-400 p-2"><Trash2 size={16} /></button>
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
-          </div>
-        )}
+              </div>
+            )}
 
-        {/* --- 노션형 체크리스트 (Checklists) 탭 --- */}
-        {activeTab === 'checklists' && (
-          <div className="max-w-3xl mx-auto">
-            <header className="mb-8 border-b border-gray-800 pb-4">
-              <h2 className="text-2xl font-bold text-emerald-400 flex items-center gap-2">
-                <CheckSquare size={24} />
-                스마트 체크리스트
-              </h2>
-              <p className="text-sm text-gray-500 mt-2">
-                <kbd className="bg-gray-800 px-1.5 py-0.5 rounded text-gray-300">Enter</kbd> 로 새 줄 추가, 
-                빈 칸에서 <kbd className="bg-gray-800 px-1.5 py-0.5 rounded text-gray-300">Backspace</kbd> 로 삭제, 
-                <kbd className="bg-gray-800 px-1.5 py-0.5 rounded text-gray-300">↑</kbd> <kbd className="bg-gray-800 px-1.5 py-0.5 rounded text-gray-300">↓</kbd> 방향키로 이동하세요.
-              </p>
-            </header>
-
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-lg min-h-[400px]">
-              {checklist.map((item, index) => (
-                <div key={item.id} className="flex items-start gap-3 group mb-1.5">
-                  <button
-                    onClick={() => handleChecklistToggle(index)}
-                    className={`mt-1 flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-colors ${
-                      item.completed ? 'bg-emerald-500 border-emerald-500 text-gray-900' : 'border-gray-500 hover:border-emerald-400 bg-gray-950'
-                    }`}
-                  >
-                    {item.completed && <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>}
-                  </button>
-                  <input
-                    id={`check-${index}`}
-                    type="text"
-                    value={item.text}
-                    onChange={(e) => handleChecklistChange(e.target.value, index)}
-                    onKeyDown={(e) => handleChecklistKeyDown(e, index)}
-                    placeholder="할 일 입력..."
-                    autoComplete="off"
-                    className={`flex-1 bg-transparent border-none focus:outline-none py-0.5 text-gray-200 placeholder-gray-700 ${
-                      item.completed ? 'text-gray-600 line-through' : ''
-                    }`}
-                  />
-                  <button
-                    onClick={() => {
-                      if(checklist.length > 1) {
-                        const newItems = [...checklist];
-                        newItems.splice(index, 1);
-                        updateChecklistDb(newItems);
-                      }
-                    }}
-                    className="text-gray-700 hover:text-red-400 opacity-0 group-hover:opacity-100 p-1 transition-opacity"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+            {activeTab === 'checklists' && (
+              <div className="max-w-3xl mx-auto">
+                <header className="mb-8 border-b border-gray-800 pb-4">
+                  <h2 className="text-2xl font-bold text-emerald-400 flex items-center gap-2"><CheckSquare size={24} />스마트 체크리스트</h2>
+                </header>
+                <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-lg min-h-[400px]">
+                  {checklist.map((item, index) => (
+                    <div key={item.id} className="flex items-start gap-3 group mb-1.5">
+                      <button onClick={() => handleChecklistToggle(index)} className={`mt-1 flex-shrink-0 w-5 h-5 rounded border flex items-center justify-center transition-colors ${item.completed ? 'bg-emerald-500 border-emerald-500 text-gray-900' : 'border-gray-500 hover:border-emerald-400 bg-gray-950'}`}>
+                        {item.completed && <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>}
+                      </button>
+                      <input id={`check-${index}`} type="text" value={item.text} onChange={(e) => handleChecklistChange(e.target.value, index)} onKeyDown={(e) => handleChecklistKeyDown(e, index)} placeholder="할 일 입력..." autoComplete="off" className={`flex-1 bg-transparent border-none focus:outline-none py-0.5 text-gray-200 placeholder-gray-700 ${item.completed ? 'text-gray-600 line-through' : ''}`} />
+                      <button onClick={() => { if(checklist.length > 1) { const newItems = [...checklist]; newItems.splice(index, 1); updateChecklistDb(newItems); } }} className="text-gray-700 hover:text-red-400 opacity-0 group-hover:opacity-100 p-1 transition-opacity"><Trash2 size={14} /></button>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+              </div>
+            )}
+          </main>
+        </div>
+      );
+    }
 
-      </main>
-    </div>
-  );
-}
+    // React 앱 실행
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>태준실험실 - 전문 자료관리시스템</title>
   
-  <!-- 디자인 및 라이브러리 (안정적인 CDN) -->
+  <!-- 디자인 및 라이브러리 -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- Firebase Compat (가장 호환성이 좋은 버전) -->
+  <!-- Firebase Compat (최강의 호환성 버전) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -20,19 +20,28 @@
   <style>
     @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
     .animate-shake { animation: shake 0.3s ease-in-out; }
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-track { background: #f8fafc; }
-    ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 20px; }
-    input:focus::placeholder { color: transparent; }
-    .loading-spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 20px; }
+    .notion-input:focus::placeholder { color: transparent; }
+    
+    /* 로딩 스피너 커스텀 */
+    .spinner {
+      border: 3px solid rgba(0, 0, 0, 0.1);
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border-left-color: #2563eb;
+      animation: spin 1s linear infinite;
+    }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
 <body class="bg-[#f8fafc] text-slate-800 font-sans antialiased">
   <div id="root">
     <div class="h-screen flex flex-col items-center justify-center bg-slate-50">
-      <div class="loading-spinner mb-4"></div>
-      <p class="text-slate-400 font-bold animate-pulse">실험실 시스템 가동 중...</p>
+      <div class="spinner mb-4" style="width: 40px; height: 40px;"></div>
+      <p class="text-slate-400 font-bold animate-pulse uppercase tracking-widest text-xs">System Booting...</p>
     </div>
   </div>
 
@@ -63,7 +72,7 @@
       Plus: ({size=18}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
       Menu: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,
       Upload: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
-      FilePdf: ({size=24, className=""}) => <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15h1a1.5 1.5 0 0 0 0-3H9v4Z"/><path d="M5 12v4"/><path d="M17 12h-2v4"/></svg>
+      FilePdf: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15h1a1.5 1.5 0 0 0 0-3H9v4Z"/><path d="M5 12v4"/><path d="M17 12h-2v4"/></svg>
     };
 
     function App() {
@@ -94,10 +103,12 @@
         if (!user) return;
         const userPath = `artifacts/${appId}/users/${user.uid}`;
         
+        // 자료보관소 구독
         const unsubA = db.collection(`${userPath}/archives`).onSnapshot(snap => {
           setArchives(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.createdAt - a.createdAt));
         });
 
+        // 체크리스트 주차 목록 구독
         const unsubC = db.collection(`${userPath}/checklists`).onSnapshot(snap => {
           const list = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.order - a.order);
           setWeeklyChecklists(list);
@@ -114,13 +125,13 @@
         try {
           await auth.signInWithEmailAndPassword(finalEmail, loginPw);
         } catch (err) {
-          setErrorMsg("접속 정보가 올바르지 않습니다.");
+          setErrorMsg("접속 정보가 일치하지 않습니다.");
         }
       };
 
-      // --- Checklist Handlers ---
+      // --- Checklist Logic ---
       const addNewWeek = async () => {
-        const weekName = prompt("주차 정보를 입력하세요 (예: 4월 4주차)");
+        const weekName = prompt("주차 정보를 입력하세요 (예: 4월 5주차)");
         if (!weekName) return;
         const userPath = `artifacts/${appId}/users/${user.uid}`;
         await db.collection(`${userPath}/checklists`).add({
@@ -131,7 +142,7 @@
         });
       };
 
-      const updateChecklist = async (weekId, newItems) => {
+      const updateItems = async (weekId, newItems) => {
         const userPath = `artifacts/${appId}/users/${user.uid}`;
         await db.doc(`${userPath}/checklists/${weekId}`).update({ items: newItems });
       };
@@ -140,10 +151,10 @@
         const week = weeklyChecklists.find(w => w.id === weekId);
         const newItems = [...week.items];
         newItems[index][field] = value;
-        updateChecklist(weekId, newItems);
+        updateItems(weekId, newItems);
       };
 
-      const handleKeyDown = (e, weekId, index) => {
+      const handleChecklistKeyDown = (e, weekId, index) => {
         const week = weeklyChecklists.find(w => w.id === weekId);
         let newItems = [...week.items];
         const item = newItems[index];
@@ -152,22 +163,25 @@
           e.preventDefault();
           const newItem = { id: Math.random().toString(36).substr(2, 9), text: '', completed: false, level: item.level, bold: false };
           newItems.splice(index + 1, 0, newItem);
-          updateChecklist(weekId, newItems);
-          setTimeout(() => document.getElementById(`input-${index + 1}`)?.focus(), 50);
+          updateItems(weekId, newItems);
+          setTimeout(() => document.getElementById(`check-input-${index + 1}`)?.focus(), 50);
         } else if (e.key === 'Tab') {
           e.preventDefault();
-          if (!e.shiftKey) { if (item.level < 4) item.level += 1; }
-          else { if (item.level > 0) item.level -= 1; }
-          updateChecklist(weekId, newItems);
+          if (!e.shiftKey) {
+            if (item.level < 4) item.level += 1;
+          } else {
+            if (item.level > 0) item.level -= 1;
+          }
+          updateItems(weekId, newItems);
         } else if (e.key === 'Backspace' && item.text === '' && newItems.length > 1) {
           e.preventDefault();
           newItems.splice(index, 1);
-          updateChecklist(weekId, newItems);
-          setTimeout(() => document.getElementById(`input-${index - 1}`)?.focus(), 50);
+          updateItems(weekId, newItems);
+          setTimeout(() => document.getElementById(`check-input-${index - 1}`)?.focus(), 50);
         } else if (e.ctrlKey && (e.key === 'b' || e.key === 'B')) {
           e.preventDefault();
           item.bold = !item.bold;
-          updateChecklist(weekId, newItems);
+          updateItems(weekId, newItems);
         }
       };
 
@@ -185,12 +199,13 @@
             name: file.name,
             url: downloadURL,
             type: file.type,
-            size: (file.size / (1024 * 1024)).toFixed(2) + 'MB',
+            size: (file.size / (1024 * 1024)).toFixed(2) + ' MB',
             createdAt: Date.now()
           });
+          alert("파일 업로드 성공!");
         } catch (err) {
           console.error(err);
-          alert("파일 업로드 실패. Storage 설정을 확인하거나 요금제를 확인하세요.");
+          alert("파일 업로드 실패: Firebase Storage 요금제(Blaze) 업그레이드 또는 보안 규칙 설정을 확인해 주세요.");
         } finally {
           setIsUploading(false);
           setIsDragging(false);
@@ -215,15 +230,15 @@
                 </div>
               </div>
               <h1 className="text-2xl font-black text-center text-slate-800 mb-1 tracking-tighter uppercase leading-none">Taejun Lab</h1>
-              <p className="text-center text-slate-400 mb-10 text-[10px] font-bold tracking-[0.3em] uppercase">Private Access Only</p>
+              <p className="text-center text-slate-400 mb-10 text-[10px] font-bold tracking-[0.3em] uppercase tracking-widest">Private Access Only</p>
               
               <form onSubmit={handleLogin} className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest block mb-2">Researcher ID</label>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest block">Identity ID</label>
                   <input type="text" value={loginId} onChange={e=>setLoginId(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold" required />
                 </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest block mb-2">Security Key</label>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-2 tracking-widest block">Security Key</label>
                   <input type="password" value={loginPw} onChange={e=>setLoginPw(e.target.value)} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold" required />
                 </div>
                 {errorMsg && <div className="bg-red-50 text-red-500 text-[11px] text-center font-bold py-3 px-4 rounded-xl animate-shake">{errorMsg}</div>}
@@ -240,7 +255,7 @@
           <header className="md:hidden flex items-center justify-between p-4 bg-[#1e293b] text-white sticky top-0 z-50">
             <div className="flex items-center gap-2">
               <Icons.Beaker size={18} color="white"/>
-              <span className="font-black text-base uppercase tracking-tighter">Lab Console</span>
+              <span className="font-black text-base uppercase tracking-tighter">Lab Dashboard</span>
             </div>
             <button onClick={()=>setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-slate-700 rounded-lg">
               <Icons.Menu size={22}/>
@@ -266,8 +281,8 @@
               </button>
             </nav>
 
-            <div className="mt-auto pt-6 border-t border-slate-700/50 text-[10px] text-slate-500 font-bold uppercase text-center mb-4">
-              Authorized Researcher: {user.email.split('@')[0]}
+            <div className="mt-auto pt-6 border-t border-slate-700/50 text-[10px] text-slate-500 font-bold uppercase text-center mb-4 truncate">
+              User: {user.email.split('@')[0]}
             </div>
             <button onClick={()=>auth.signOut()} className="w-full flex items-center justify-center gap-2 bg-slate-800/40 hover:bg-red-500/10 hover:text-red-400 text-slate-400 py-3.5 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest border border-slate-700/50 active:scale-95">
               <Icons.LogOut size={12}/> Sign Out
@@ -275,41 +290,43 @@
           </aside>
 
           {/* Main Area */}
-          <main className="flex-1 p-5 md:p-12 lg:p-16 overflow-y-auto">
+          <main className="flex-1 p-5 md:p-10 lg:p-16 overflow-y-auto">
             {activeTab === 'checklist' ? (
               <div className="max-w-4xl mx-auto">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-10">
                   <div>
-                    <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase">Research Protocols</h2>
-                    <p className="text-slate-400 mt-1 font-bold text-sm">실시간 동기화 업무 체크리스트</p>
+                    <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase">Work Checklist</h2>
+                    <p className="text-slate-400 mt-1 font-bold text-sm">노션 스타일 업무 동기화 리스트</p>
                   </div>
                   <button onClick={addNewWeek} className="bg-blue-600 hover:bg-blue-700 text-white font-black px-6 py-3.5 rounded-xl shadow-lg shadow-blue-100 flex items-center gap-2 transition-all active:scale-95 text-sm">
                     <Icons.Plus size={18}/> 주차 추가
                   </button>
                 </div>
 
+                {/* Week Tabs */}
                 <div className="flex flex-wrap gap-2 mb-8">
                   {weeklyChecklists.map(week => (
                     <button 
                       key={week.id} 
                       onClick={()=>setSelectedWeekId(week.id)}
-                      className={`px-5 py-2.5 rounded-xl font-black text-[12px] transition-all border-2 ${selectedWeekId === week.id ? 'bg-[#1e293b] text-white border-[#1e293b]' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'}`}
+                      className={`px-5 py-2.5 rounded-xl font-black text-[11px] transition-all border-2 ${selectedWeekId === week.id ? 'bg-[#1e293b] text-white border-[#1e293b]' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'}`}
                     >
                       {week.title}
                     </button>
                   ))}
                 </div>
 
+                {/* Notion List View */}
                 {selectedWeekId && weeklyChecklists.find(w => w.id === selectedWeekId) && (
-                  <div className="bg-white rounded-[2rem] shadow-xl shadow-slate-200/40 border border-slate-100 p-6 md:p-10 relative group">
+                  <div className="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/40 border border-slate-100 p-8 md:p-12 relative group min-h-[500px]">
                     <button 
                       onClick={async () => {
-                        if(confirm("이 주차의 데이터를 삭제하시겠습니까?")) {
+                        if(confirm("이 주차 데이터를 삭제하시겠습니까?")) {
                           await db.doc(`artifacts/${appId}/users/${user.uid}/checklists/${selectedWeekId}`).delete();
                           setSelectedWeekId(null);
                         }
                       }}
-                      className="absolute top-6 right-6 text-slate-200 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100 p-2"
+                      className="absolute top-8 right-8 text-slate-200 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100 p-2"
                     >
                       <Icons.Trash size={18}/>
                     </button>
@@ -318,7 +335,7 @@
                     
                     <div className="space-y-1">
                       {weeklyChecklists.find(w => w.id === selectedWeekId).items.map((item, idx) => (
-                        <div key={item.id} className="flex items-start group/item transition-all" style={{ marginLeft: `${item.level * 24}px` }}>
+                        <div key={item.id} className="flex items-start group/item transition-all" style={{ marginLeft: `${item.level * 28}px` }}>
                           <button 
                             onClick={() => handleItemChange(selectedWeekId, idx, 'completed', !item.completed)}
                             className={`mt-1.5 w-4.5 h-4.5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${item.completed ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-200 bg-white hover:border-blue-400'}`}
@@ -326,17 +343,25 @@
                             {item.completed && <svg className="w-3 h-3 fill-current" viewBox="0 0 20 20"><path d="M0 11l2-2 5 5L18 3l2 2L7 18z"/></svg>}
                           </button>
                           <input 
-                            id={`input-${idx}`}
+                            id={`check-input-${idx}`}
                             type="text" 
                             value={item.text}
                             onChange={(e) => handleItemChange(selectedWeekId, idx, 'text', e.target.value)}
-                            onKeyDown={(e) => handleKeyDown(e, selectedWeekId, idx)}
-                            className={`flex-1 bg-transparent border-none outline-none px-3 py-1 text-base transition-all ${item.completed ? 'text-slate-300 line-through font-medium' : 'text-slate-700 font-bold'} ${item.bold ? 'font-black underline' : ''}`}
-                            placeholder="내용 입력..."
+                            onKeyDown={(e) => handleChecklistKeyDown(e, selectedWeekId, idx)}
+                            className={`flex-1 bg-transparent border-none outline-none px-3 py-1 text-base transition-all notion-input ${item.completed ? 'text-slate-300 line-through font-medium' : 'text-slate-700 font-bold'} ${item.bold ? 'font-black underline' : ''}`}
+                            placeholder="할 일 입력 (Enter: 줄 추가, Tab: 들여쓰기)"
                             autoComplete="off"
                           />
                         </div>
                       ))}
+                    </div>
+
+                    {/* Shortcut Guide */}
+                    <div className="mt-16 pt-6 border-t border-slate-50 flex flex-wrap gap-4 text-[9px] font-black text-slate-300 uppercase tracking-widest">
+                      <div className="flex items-center gap-1.5"><span className="bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">Enter</span> 줄추가</div>
+                      <div className="flex items-center gap-1.5"><span className="bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">Tab</span> 들여쓰기</div>
+                      <div className="flex items-center gap-1.5"><span className="bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">Shift+Tab</span> 내어쓰기</div>
+                      <div className="flex items-center gap-1.5"><span className="bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">Ctrl+B</span> 볼드</div>
                     </div>
                   </div>
                 )}
@@ -344,8 +369,8 @@
             ) : (
               <div className="max-w-5xl mx-auto">
                 <div className="mb-10">
-                  <h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase">Lab Archive</h2>
-                  <p className="text-slate-400 mt-2 font-bold text-lg">파일 업로드 및 클라우드 자산 관리</p>
+                  <h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase leading-none">Lab Archive</h2>
+                  <p className="text-slate-400 mt-2 font-bold text-lg">파일 드래그 앤 드롭 업로드 관리</p>
                 </div>
 
                 {/* Drop Zone */}
@@ -353,32 +378,32 @@
                   onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                   onDragLeave={() => setIsDragging(false)}
                   onDrop={onDrop}
-                  className={`bg-white rounded-[2.5rem] p-10 md:p-14 border-4 border-dashed transition-all mb-12 flex flex-col items-center justify-center text-center ${isDragging ? 'border-blue-600 bg-blue-50' : 'border-slate-100 hover:border-blue-200'}`}
+                  className={`bg-white rounded-[3rem] p-12 border-4 border-dashed transition-all mb-12 flex flex-col items-center justify-center text-center ${isDragging ? 'border-blue-600 bg-blue-50' : 'border-slate-100 hover:border-blue-300 shadow-sm'}`}
                 >
-                  <div className={`p-6 rounded-3xl mb-4 transition-all ${isUploading ? 'bg-slate-100 animate-pulse' : 'bg-blue-100 text-blue-600'}`}>
-                    {isUploading ? <div className="loading-spinner"></div> : <Icons.Upload size={32}/>}
+                  <div className={`p-6 rounded-3xl mb-4 transition-all ${isUploading ? 'bg-slate-50' : 'bg-blue-50 text-blue-600'}`}>
+                    {isUploading ? <div className="spinner"></div> : <Icons.Upload size={32}/>}
                   </div>
                   <h3 className="text-xl font-black text-slate-800 mb-2">
-                    {isUploading ? "파일을 클라우드에 전송 중입니다..." : "여기에 파일을 끌어다 놓으세요"}
+                    {isUploading ? "파일을 클라우드로 전송 중..." : "파일을 여기에 끌어다 놓으세요"}
                   </h3>
-                  <p className="text-slate-400 font-bold text-sm mb-6">PDF, 이미지, 문서 등 무엇이든 가능합니다.</p>
+                  <p className="text-slate-400 font-bold text-xs mb-6 px-4">PDF, 이미지, 실험 데이터 등 무엇이든 가능합니다.</p>
                   
-                  <label className="bg-[#1e293b] hover:bg-slate-800 text-white font-black px-8 py-3 rounded-xl cursor-pointer transition-all active:scale-95 text-sm">
-                    내 컴퓨터에서 찾기
+                  <label className="bg-[#1e293b] hover:bg-slate-800 text-white font-black px-8 py-3 rounded-xl cursor-pointer transition-all active:scale-95 text-xs">
+                    컴퓨터에서 선택하기
                     <input type="file" className="hidden" onChange={(e) => uploadFile(e.target.files[0])} disabled={isUploading} />
                   </label>
                 </div>
 
-                {/* Table */}
+                {/* File List */}
                 <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200/60 overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left min-w-[600px]">
                       <thead className="bg-slate-50/50 border-b border-slate-100">
                         <tr>
-                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">파일 명칭 / 형식</th>
+                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">파일명</th>
                           <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">크기</th>
-                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">등록일</th>
-                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">옵션</th>
+                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">업로드일</th>
+                          <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">관리</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
@@ -386,7 +411,7 @@
                           <tr key={item.id} className="hover:bg-blue-50/40 transition-all group">
                             <td className="px-8 py-6">
                               <div className="flex items-center gap-4">
-                                <div className={`p-2 rounded-lg ${item.name.toLowerCase().endsWith('.pdf') ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-400'}`}>
+                                <div className={`p-2 rounded-lg ${item.name.toLowerCase().endsWith('.pdf') ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-400'}`}>
                                   {item.name.toLowerCase().endsWith('.pdf') ? <Icons.FilePdf size={20}/> : <Icons.FileText size={20}/>}
                                 </div>
                                 <span className="font-extrabold text-base text-slate-700 tracking-tight">{item.name}</span>
@@ -396,14 +421,17 @@
                             <td className="px-8 py-6 text-xs text-slate-400 font-bold text-center tabular-nums">{new Date(item.createdAt).toLocaleDateString()}</td>
                             <td className="px-8 py-6 text-right">
                               <div className="flex justify-end gap-3">
-                                <a href={item.url} target="_blank" rel="noreferrer" className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white font-black text-[10px] px-6 py-2.5 rounded-xl transition-all border border-blue-100 uppercase tracking-widest flex items-center gap-2">
-                                  다운로드 <Icons.ExternalLink size={12}/>
+                                <a href={item.url} target="_blank" rel="noreferrer" className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white font-black text-[10px] px-6 py-2.5 rounded-xl transition-all border border-blue-100 uppercase tracking-widest flex items-center gap-2 shadow-sm">
+                                  Download
                                 </a>
-                                <button onClick={()=>confirm("파일을 삭제할까요?") && db.doc(`artifacts/${appId}/users/${user.uid}/archives/${item.id}`).delete()} className="text-slate-200 hover:text-red-500 transition-all p-2"><Icons.Trash size={18}/></button>
+                                <button onClick={()=>confirm("파일을 삭제하시겠습니까?") && db.doc(`artifacts/${appId}/users/${user.uid}/archives/${item.id}`).delete()} className="text-slate-200 hover:text-red-500 transition-all p-2"><Icons.Trash size={18}/></button>
                               </div>
                             </td>
                           </tr>
                         ))}
+                        {archives.length === 0 && (
+                          <tr><td colSpan="4" className="px-8 py-20 text-center text-slate-300 font-bold italic">보관된 자료가 없습니다.</td></tr>
+                        )}
                       </tbody>
                     </table>
                   </div>

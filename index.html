@@ -16,12 +16,13 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700;900&display=swap');
     @font-face {
       font-family: 'Pretendard';
       src: url('https://cdn.jsdelivr.net/gh/Project-Noonnu/noonfonts_2107@1.1/Pretendard-Regular.woff') format('woff');
       font-weight: normal; font-style: normal;
     }
-    body { font-family: 'Pretendard', sans-serif; overflow-x: hidden; touch-action: manipulation; }
+    body { font-family: 'Pretendard', sans-serif; overflow-x: hidden; background-color: #f8fafc; }
     
     .spinner {
       border: 3px solid rgba(0, 0, 0, 0.1);
@@ -30,45 +31,40 @@
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     
-    ::-webkit-scrollbar { width: 4px; height: 4px; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    /* 체크리스트 가독성 */
+    .notion-row:focus-within { background-color: #f1f5f9; border-radius: 8px; }
+    .notion-input { background: transparent; border: none; outline: none; width: 100%; padding: 4px 0; }
     
-    .bid-table th { white-space: nowrap; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; padding: 12px 16px; background: #f8fafc; border-bottom: 2px solid #f1f5f9; position: sticky; top: 0; z-index: 10; }
-    .bid-table td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; min-width: 140px; vertical-align: middle; }
-    .status-pill { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; display: inline-block; border: none; outline: none; }
-    
-    .notion-item:focus-within { background-color: #f1f5f9; border-radius: 8px; }
-    .nav-btn.active { background-color: #2563eb; color: white; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3); }
-    
-    .filter-input {
-      width: 100%; background: #fff; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px 8px; font-size: 10px; margin-top: 4px;
-    }
-    
-    /* 서류 양식 미리보기 스타일 */
-    .cert-container {
-      width: 210mm; min-height: 297mm; padding: 20mm; background: white; margin: 0 auto; box-shadow: 0 0 20px rgba(0,0,0,0.05); color: black; line-height: 1.6;
-    }
-    .cert-title { font-size: 44px; font-weight: 900; text-align: center; margin-bottom: 60px; letter-spacing: 15px; text-decoration: underline; text-underline-offset: 10px; }
-    .cert-table { width: 100%; border-collapse: collapse; margin-bottom: 40px; }
-    .cert-table th, .cert-table td { border: 1.5px solid black; padding: 12px 15px; font-size: 16px; height: 50px; }
-    .cert-table th { background: #f9f9f9; width: 150px; font-weight: 700; text-align: center; }
+    /* 자료 보관소 테이블 최적화 */
+    .archive-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .archive-table th { background: #f1f5f9; color: #64748b; font-size: 11px; text-transform: uppercase; padding: 12px 20px; font-weight: 800; border-bottom: 1px solid #e2e8f0; }
+    .archive-table td { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
 
-    /* 인쇄 최적화 */
+    /* 재직증명서 A4 레이아웃 */
+    .cert-container {
+      width: 210mm; min-height: 297mm; padding: 20mm; background: white; margin: 0 auto;
+      box-shadow: 0 0 30px rgba(0,0,0,0.1); color: black; line-height: 1.5; position: relative;
+    }
+    .cert-header { font-family: 'Noto Serif KR', serif; font-size: 45px; font-weight: 900; text-align: center; margin-bottom: 50px; letter-spacing: 15px; text-decoration: underline; text-underline-offset: 8px; }
+    .cert-table { width: 100%; border: 2px solid black; border-collapse: collapse; margin-bottom: 30px; }
+    .cert-table th, .cert-table td { border: 1px solid black; padding: 10px 15px; font-size: 16px; height: 50px; }
+    .cert-table th { background: #f5f5f5; width: 140px; font-weight: 700; text-align: center; letter-spacing: 2px; }
+    
+    /* 도장/인감 위치 세팅 */
+    .seal-wrap { position: relative; display: inline-block; }
+    .seal-img { position: absolute; width: 60px; height: 60px; left: 140px; top: -15px; opacity: 0.85; pointer-events: none; }
+
+    /* 인쇄 모드 */
     @media print {
       body * { visibility: hidden; }
       .print-area, .print-area * { visibility: visible; }
-      .print-area { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; box-shadow: none; }
+      .print-area { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; padding: 0; }
       @page { size: A4; margin: 0; }
     }
   </style>
 </head>
-<body class="bg-[#f8fafc] text-slate-800 antialiased">
-  <div id="root">
-    <div class="h-screen flex flex-col items-center justify-center bg-white">
-      <div class="spinner mb-4"></div>
-      <p class="text-slate-400 font-bold text-xs tracking-widest uppercase animate-pulse">태준실험실 데이터 복구 중...</p>
-    </div>
-  </div>
+<body>
+  <div id="root"></div>
 
   <script type="text/babel">
     const firebaseConfig = {
@@ -83,22 +79,20 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();
-    const storage = firebase.storage();
     const appId = 'taejun-lab';
 
     const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
     const Icons = {
       Beaker: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 3h15"/><path d="M6 3v16a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V3"/><path d="M6 14h12"/></svg>,
-      FileText: ({size=20}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>,
-      Check: ({size=20}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="m9 12 2 2 4-4"/></svg>,
       Table: ({size=20}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>,
+      Check: ({size=20}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><path d="m9 12 2 2 4-4"/></svg>,
+      FileText: ({size=20}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>,
+      Link: ({size=20}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>,
       Printer: ({size=18}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>,
-      LogOut: ({size=18}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
-      Plus: ({size=18}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
       Trash: ({size=16}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
-      Copy: ({size=18}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,
-      Link: ({size=18}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      ChevronDown: ({size=16}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>,
+      Plus: ({size=18}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     };
 
     function App() {
@@ -107,31 +101,29 @@
       const [loginId, setLoginId] = useState('');
       const [loginPw, setLoginPw] = useState('');
       const [errorMsg, setErrorMsg] = useState('');
-      const [sidebarOpen, setSidebarOpen] = useState(false);
-
+      
       const [activeTab, setActiveTab] = useState('bid_sheet');
+      const [isDocMenuOpen, setIsDocMenuOpen] = useState(true);
+
       const [archives, setArchives] = useState([]);
       const [weeklyChecklists, setWeeklyChecklists] = useState([]);
       const [selectedWeekId, setSelectedWeekId] = useState(null);
-      
       const [bidData, setBidData] = useState([]);
-      const [bidFilters, setBidFilters] = useState({ status: '', category: '', client: '', title: '', entity: '', dept: '', author: '' });
-      const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
-      const [bulkPasteText, setBulkPasteText] = useState('');
+      const [bidFilters, setBidFilters] = useState({ status: '', category: '', client: '', title: '', entity: '' });
       
       const [certData, setCertData] = useState({
-        docNo: '제 20260721호',
-        name: '이장석',
+        docNo: '제 20260721-01호',
+        name: '이 장 석',
         ssn: '891101-1******',
         address: '경기도 광명시 철산동 센트럴프루지오',
         position: '대표이사',
-        dept: '-',
-        period: '2021년 04월 01일 ~ 2025년 2월 7일(현재)',
-        workType: '상 근',
+        dept: '대표이사 부',
+        period: '2021년 04월 01일 ~ 2026년 02월 04일(현재)',
+        workType: '상근',
         hireType: '정규직',
         issueDate: '2026-02-04',
         companyAddr: '서울시 금천구 디지털로 178, 가산퍼블릭 제A 동 5층 502호',
-        companyName: '㈜워드캣(150-81-01259)',
+        companyName: '㈜워드캣 (150-81-01259)',
         ceoName: '이 장 석'
       });
 
@@ -146,72 +138,34 @@
         if (!user) return;
         const userPath = `artifacts/${appId}/users/${user.uid}`;
         
-        const unsubA = db.collection(`${userPath}/archives`).onSnapshot(snap => {
+        db.collection(`${userPath}/archives`).onSnapshot(snap => {
           setArchives(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.createdAt - a.createdAt));
-        }, (err) => console.error(err));
+        });
 
-        const unsubC = db.collection(`${userPath}/checklists`).onSnapshot(snap => {
+        db.collection(`${userPath}/checklists`).onSnapshot(snap => {
           const list = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.order - a.order);
           setWeeklyChecklists(list);
           if (list.length > 0 && !selectedWeekId) setSelectedWeekId(list[0].id);
-        }, (err) => console.error(err));
+        });
 
-        const unsubB = db.collection(`${userPath}/bids`).onSnapshot(snap => {
+        db.collection(`${userPath}/bids`).onSnapshot(snap => {
           setBidData(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.createdAt - a.createdAt));
-        }, (err) => console.error(err));
-
-        return () => { unsubA(); unsubC(); unsubB(); };
+        });
       }, [user]);
 
       const handleLogin = async (e) => {
         e.preventDefault();
-        setErrorMsg('');
         const finalEmail = loginId.includes('@') ? loginId : `${loginId}@taejun.lab`;
         try { await auth.signInWithEmailAndPassword(finalEmail, loginPw); } catch (err) { setErrorMsg("계정 정보가 일치하지 않습니다."); }
       };
 
-      // --- 입찰 시트 로직 ---
-      const filteredBidData = useMemo(() => {
-        return bidData.filter(item => Object.keys(bidFilters).every(key => !bidFilters[key] || String(item[key] || '').toLowerCase().includes(bidFilters[key].toLowerCase())));
-      }, [bidData, bidFilters]);
-
-      const updateBid = (bidId, field, value) => {
-        setBidData(prev => prev.map(item => item.id === bidId ? { ...item, [field]: value } : item));
-        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = setTimeout(async () => {
-          if (!user) return;
-          await db.doc(`artifacts/${appId}/users/${user.uid}/bids/${bidId}`).update({ [field]: value });
-        }, 800);
-      };
-
-      const handleBulkImport = async () => {
-        if (!bulkPasteText.trim() || !user) return;
-        const rows = bulkPasteText.trim().split('\n');
-        const userPath = `artifacts/${appId}/users/${user.uid}`;
-        const batch = db.batch();
-        rows.forEach(row => {
-          const cols = row.split('\t');
-          const newDocRef = db.collection(`${userPath}/bids`).doc();
-          batch.set(newDocRef, {
-            status: cols[0] || '진행중', category: cols[1] || 'MICE', client: cols[2] || '', title: cols[3] || '',
-            budget: Number(cols[4]?.replace(/[^0-9]/g, '')) || 0, entity: cols[5] || '', submitDate: cols[6] || '',
-            dept: cols[7] || '', author: cols[8] || '', bidAmount: Number(cols[9]?.replace(/[^0-9]/g, '')) || 0,
-            ptStatus: cols[10] || '확인 필요', ptDate: cols[11] || '', createdAt: Date.now()
-          });
-        });
-        await batch.commit();
-        setBulkPasteText('');
-        setIsBulkModalOpen(false);
-        alert(`${rows.length}개의 데이터가 추가되었습니다.`);
-      };
-
-      // --- 체크리스트 로직 (패치 적용) ---
-      const syncChecklistToDb = useCallback((weekId, items) => {
+      // --- 체크리스트 동기화 로직 ---
+      const syncChecklist = useCallback((weekId, items) => {
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
         saveTimerRef.current = setTimeout(async () => {
           if (!user) return;
           await db.doc(`artifacts/${appId}/users/${user.uid}/checklists/${weekId}`).update({ items });
-        }, 800);
+        }, 1000);
       }, [user]);
 
       const handleCheckItemChange = (weekId, index, field, value) => {
@@ -222,11 +176,13 @@
           let newItems = [...updated[wIdx].items];
           let finalValue = value;
           let finalLevel = newItems[index].level;
+          
           if (field === 'text' && value.startsWith('> ')) { finalValue = value.substring(2); finalLevel = Math.min(4, finalLevel + 1); }
           else if (field === 'text' && value.startsWith('[] ')) { finalValue = value.substring(3); }
+          
           newItems[index] = { ...newItems[index], [field]: finalValue, level: finalLevel };
           updated[wIdx].items = newItems;
-          syncChecklistToDb(weekId, newItems);
+          syncChecklist(weekId, newItems);
           return updated;
         });
       };
@@ -236,12 +192,18 @@
         if (!week) return;
         let newItems = [...week.items];
         const item = newItems[index];
+
         if (e.key === 'Enter') {
           e.preventDefault();
           const newItem = { id: Math.random().toString(36).substr(2, 9), text: '', completed: false, level: item.level, bold: false };
           newItems.splice(index + 1, 0, newItem);
-          setWeeklyChecklists(prev => { const next = [...prev]; const wIdx = next.findIndex(w => w.id === weekId); next[wIdx].items = newItems; return next; });
-          syncChecklistToDb(weekId, newItems);
+          setWeeklyChecklists(prev => {
+            const next = [...prev];
+            const wIdx = next.findIndex(w => w.id === weekId);
+            next[wIdx].items = newItems;
+            return next;
+          });
+          syncChecklist(weekId, newItems);
           setTimeout(() => document.getElementById(`notion-input-${index + 1}`)?.focus(), 10);
         } else if (e.key === 'Tab') {
           e.preventDefault();
@@ -250,21 +212,24 @@
         } else if (e.key === 'Backspace' && item.text === '' && newItems.length > 1) {
           e.preventDefault();
           newItems.splice(index, 1);
-          setWeeklyChecklists(prev => { const next = [...prev]; const wIdx = next.findIndex(w => w.id === weekId); next[wIdx].items = newItems; return next; });
-          syncChecklistToDb(weekId, newItems);
+          setWeeklyChecklists(prev => {
+            const next = [...prev];
+            const wIdx = next.findIndex(w => w.id === weekId);
+            next[wIdx].items = newItems;
+            return next;
+          });
+          syncChecklist(weekId, newItems);
           setTimeout(() => document.getElementById(`notion-input-${index - 1}`)?.focus(), 10);
         }
       };
 
-      // --- 아카이브(자료보관소) 로직 ---
-      const addNASPath = async () => {
-        const name = prompt("자료의 명칭을 입력하세요.");
-        if (!name) return;
-        const path = prompt("NAS 주소 또는 로컬 경로를 입력하세요.");
-        if (!path) return;
-        const userPath = `artifacts/${appId}/users/${user.uid}`;
-        await db.collection(`${userPath}/archives`).add({
-          name, url: path, isExternal: true, size: 'External', createdAt: Date.now()
+      // --- 아카이브 경로 추가 ---
+      const addPath = async () => {
+        const name = prompt("자료 명칭");
+        const path = prompt("NAS/로컬 경로 주소");
+        if (!name || !path) return;
+        await db.collection(`artifacts/${appId}/users/${user.uid}/archives`).add({
+          name, url: path, isExternal: true, createdAt: Date.now()
         });
       };
 
@@ -272,16 +237,16 @@
 
       if (!user) {
         return (
-          <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6 text-center">
-            <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl p-10 border border-white">
-              <div className="flex justify-center mb-8"><div className="p-4 bg-blue-600 rounded-2xl shadow-xl shadow-blue-200"><Icons.Beaker size={44} color="white"/></div></div>
-              <h1 className="text-3xl font-black text-slate-800 mb-1 tracking-tighter uppercase">Taejun Lab</h1>
-              <p className="text-slate-400 mb-10 text-[10px] font-bold tracking-[0.4em] uppercase">Private Security</p>
-              <form onSubmit={handleLogin} className="space-y-6 text-left">
-                <input type="text" value={loginId} onChange={e=>setLoginId(e.target.value)} placeholder="ID" className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 outline-none font-bold" required />
-                <input type="password" value={loginPw} onChange={e=>setLoginPw(e.target.value)} placeholder="PW" className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 outline-none font-bold" required />
-                {errorMsg && <div className="bg-red-50 text-red-500 text-[11px] text-center font-bold py-3 px-4 rounded-xl animate-shake">{errorMsg}</div>}
-                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-xl uppercase transition-all mt-2 active:scale-95">Login</button>
+          <div className="min-h-screen bg-[#0f172a] text-white flex items-center justify-center p-6">
+            <div className="max-w-md w-full bg-[#1e293b] rounded-[2.5rem] shadow-2xl p-10 border border-slate-700">
+              <div className="flex justify-center mb-8"><div className="p-4 bg-blue-600 rounded-2xl shadow-xl shadow-blue-500/20"><Icons.Beaker size={44}/></div></div>
+              <h1 className="text-3xl font-black text-center mb-1 tracking-tighter uppercase leading-none">Taejun Lab</h1>
+              <p className="text-center text-slate-400 mb-10 text-[10px] font-bold tracking-[0.4em] uppercase">Private Security</p>
+              <form onSubmit={handleLogin} className="space-y-6">
+                <input type="text" value={loginId} onChange={e=>setLoginId(e.target.value)} placeholder="실험실 ID" className="w-full bg-[#0f172a] border border-slate-700 rounded-xl p-4 outline-none font-bold focus:border-blue-500 transition-colors" required />
+                <input type="password" value={loginPw} onChange={e=>setLoginPw(e.target.value)} placeholder="보안키" className="w-full bg-[#0f172a] border border-slate-700 rounded-xl p-4 outline-none font-bold focus:border-blue-500 transition-colors" required />
+                {errorMsg && <div className="bg-red-500/10 text-red-500 text-[11px] text-center font-bold py-3 px-4 rounded-xl">{errorMsg}</div>}
+                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-xl shadow-xl uppercase active:scale-95 transition-all">접속하기</button>
               </form>
             </div>
           </div>
@@ -292,97 +257,94 @@
 
       return (
         <div className="min-h-screen flex flex-col md:flex-row bg-[#f8fafc]">
+          {/* 사이드바 */}
           <aside className="w-full md:w-64 bg-[#1e293b] text-white p-6 flex flex-col shadow-2xl shrink-0">
             <div className="flex items-center gap-3 mb-12 mt-2 px-2">
-              <div className="p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-900/40"><Icons.Beaker size={22} color="white"/></div>
+              <div className="p-2 bg-blue-600 rounded-xl shadow-lg shadow-blue-500/20"><Icons.Beaker size={22} color="white"/></div>
               <h1 className="text-xl font-black tracking-tighter uppercase leading-none">Taejun Lab</h1>
             </div>
             <nav className="flex-1 space-y-2">
-              <button onClick={()=>setActiveTab('bid_sheet')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all font-bold text-sm nav-btn ${activeTab === 'bid_sheet' ? 'active' : 'text-slate-400 hover:bg-slate-800'}`}>
+              <button onClick={()=>setActiveTab('bid_sheet')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all font-bold text-sm ${activeTab === 'bid_sheet' ? 'bg-blue-600 shadow-xl text-white' : 'text-slate-400 hover:bg-slate-700/50'}`}>
                 <Icons.Table size={20}/> <span>입찰 참여 시트</span>
               </button>
-              <button onClick={()=>setActiveTab('checklist')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all font-bold text-sm nav-btn ${activeTab === 'checklist' ? 'active' : 'text-slate-400 hover:bg-slate-800'}`}>
+              <button onClick={()=>setActiveTab('checklist')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all font-bold text-sm ${activeTab === 'checklist' ? 'bg-blue-600 shadow-xl text-white' : 'text-slate-400 hover:bg-slate-700/50'}`}>
                 <Icons.Check size={20}/> <span>체크리스트</span>
               </button>
-              <button onClick={()=>setActiveTab('doc_gen')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all font-bold text-sm nav-btn ${activeTab === 'doc_gen' ? 'active' : 'text-slate-400 hover:bg-slate-800'}`}>
-                <Icons.FileText size={20}/> <span>서류생성</span>
-              </button>
-              <button onClick={()=>setActiveTab('archives')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all font-bold text-sm nav-btn ${activeTab === 'archives' ? 'active' : 'text-slate-400 hover:bg-slate-800'}`}>
+              
+              <div className="space-y-1">
+                <button onClick={()=>setIsDocMenuOpen(!isDocMenuOpen)} className={`w-full flex items-center justify-between px-6 py-4 rounded-2xl transition-all font-bold text-sm text-slate-400 hover:bg-slate-700/50`}>
+                  <div className="flex items-center gap-4"><Icons.FileText size={20}/> <span>서류 생성</span></div>
+                  <Icons.ChevronDown size={14} className={`transition-transform ${isDocMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isDocMenuOpen && (
+                  <div className="pl-10 space-y-1 animate-fadeIn">
+                    <button onClick={()=>setActiveTab('cert_emp')} className={`w-full text-left py-3 px-4 rounded-xl text-xs font-bold transition-all ${activeTab === 'cert_emp' ? 'text-blue-400 bg-blue-400/10' : 'text-slate-500 hover:text-white'}`}>재직증명서</button>
+                    <div className="w-full text-left py-3 px-4 rounded-xl text-xs font-bold text-slate-700 italic cursor-not-allowed">준비 중...</div>
+                  </div>
+                )}
+              </div>
+
+              <button onClick={()=>setActiveTab('archives')} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl transition-all font-bold text-sm ${activeTab === 'archives' ? 'bg-blue-600 shadow-xl text-white' : 'text-slate-400 hover:bg-slate-700/50'}`}>
                 <Icons.Link size={20}/> <span>자료 보관소</span>
               </button>
             </nav>
-            <button onClick={()=>auth.signOut()} className="mt-auto w-full flex items-center justify-center gap-2 bg-slate-800/40 hover:bg-red-500/10 text-slate-400 py-4 rounded-2xl transition-all text-[11px] font-black uppercase border border-slate-700/50">Logout System</button>
+            <button onClick={()=>auth.signOut()} className="mt-auto w-full flex items-center justify-center gap-2 bg-slate-800/40 hover:bg-red-500/10 text-slate-500 py-4 rounded-2xl transition-all text-[11px] font-black uppercase border border-slate-700/50">Logout System</button>
           </aside>
 
+          {/* 메인 영역 */}
           <main className="flex-1 p-6 md:p-10 overflow-y-auto">
             {activeTab === 'bid_sheet' && (
               <div className="max-w-[1700px] mx-auto">
-                <div className="flex items-center justify-between mb-10">
-                  <div><h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase leading-none">Bidding Sheet</h2><p className="text-slate-400 mt-2 font-bold text-sm uppercase tracking-widest leading-none">실시간 현황 관리</p></div>
-                  <div className="flex gap-4">
-                    <button onClick={()=>setIsBulkModalOpen(true)} className="bg-[#1e293b] hover:bg-slate-800 text-white font-black px-6 py-3.5 rounded-2xl shadow-xl flex items-center gap-2 active:scale-95 transition-all text-sm"><Icons.Copy size={18}/> 엑셀 일괄 추가</button>
-                    <button onClick={async () => { await db.collection(`artifacts/${appId}/users/${user.uid}/bids`).add({ status: '진행중', category: 'MICE', client: '', title: '', budget: 0, createdAt: Date.now() }); }} className="bg-blue-600 hover:bg-blue-700 text-white font-black px-6 py-3.5 rounded-2xl shadow-xl flex items-center gap-2 active:scale-95 transition-all text-sm"><Icons.Plus size={18}/> 새 행 추가</button>
-                  </div>
-                </div>
-                <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden">
-                  <div className="overflow-x-auto max-h-[70vh]">
-                    <table className="w-full bid-table text-left border-collapse">
-                      <thead>
-                        <tr>
-                          <th>상태<br/><input type="text" placeholder="검색" className="filter-input" onChange={e=>setBidFilters({...bidFilters, status: e.target.value})} /></th>
-                          <th>분야<br/><input type="text" placeholder="검색" className="filter-input" onChange={e=>setBidFilters({...bidFilters, category: e.target.value})} /></th>
-                          <th>발주처<br/><input type="text" placeholder="검색" className="filter-input" onChange={e=>setBidFilters({...bidFilters, client: e.target.value})} /></th>
-                          <th>공고명<br/><input type="text" placeholder="검색" className="filter-input" onChange={e=>setBidFilters({...bidFilters, title: e.target.value})} /></th>
-                          <th>예산</th><th>법인</th><th>제출일</th><th>부서</th><th>작성자</th><th>투찰가</th><th>PT상태</th><th>PT일시</th><th className="text-right">삭제</th>
+                <h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase mb-10 leading-none">Bidding Sheet</h2>
+                <div className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 overflow-hidden overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-slate-50 border-b-2 border-slate-100">
+                      <tr>
+                        <th className="px-6 py-4 text-[11px] font-black uppercase text-slate-400">상태</th>
+                        <th className="px-6 py-4 text-[11px] font-black uppercase text-slate-400">발주처</th>
+                        <th className="px-6 py-4 text-[11px] font-black uppercase text-slate-400">공고명</th>
+                        <th className="px-6 py-4 text-[11px] font-black uppercase text-slate-400">투찰가</th>
+                        <th className="px-6 py-4 text-right">삭제</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 text-slate-700">
+                      {bidData.map(bid => (
+                        <tr key={bid.id} className="hover:bg-blue-50/40 transition-colors">
+                          <td className="px-6 py-4"><span className="px-3 py-1 rounded-md bg-blue-100 text-blue-700 font-bold text-xs">{bid.status}</span></td>
+                          <td className="px-6 py-4 font-black">{bid.client}</td>
+                          <td className="px-6 py-4 text-slate-500">{bid.title}</td>
+                          <td className="px-6 py-4 font-mono font-bold text-blue-600">₩{Number(bid.bidAmount || 0).toLocaleString()}</td>
+                          <td className="px-6 py-4 text-right"><button onClick={()=>db.doc(`artifacts/${appId}/users/${user.uid}/bids/${bid.id}`).delete()} className="text-slate-200 hover:text-red-500"><Icons.Trash/></button></td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-50 text-slate-700">
-                        {filteredBidData.map(bid => (
-                          <tr key={bid.id} className="hover:bg-blue-50/40 transition-colors">
-                            <td>
-                              <select value={bid.status} onChange={(e) => updateBid(bid.id, 'status', e.target.value)} className={`status-pill ${bid.status === '진행중' ? 'bg-green-100 text-green-700' : bid.status === '제출완료' ? 'bg-blue-100 text-blue-700' : bid.status === '낙찰' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-50 text-red-600'}`}>
-                                <option>진행중</option><option>제출완료</option><option>낙찰</option><option>탈락</option><option>검토중</option>
-                              </select>
-                            </td>
-                            <td><input type="text" value={bid.category} onChange={e=>updateBid(bid.id, 'category', e.target.value)} className="bg-transparent w-full outline-none focus:bg-white" /></td>
-                            <td><input type="text" value={bid.client} onChange={e=>updateBid(bid.id, 'client', e.target.value)} className="bg-transparent w-full outline-none focus:bg-white font-bold" /></td>
-                            <td><input type="text" value={bid.title} onChange={e=>updateBid(bid.id, 'title', e.target.value)} className="bg-transparent w-full outline-none focus:bg-white" /></td>
-                            <td><input type="number" value={bid.budget} onChange={e=>updateBid(bid.id, 'budget', e.target.value)} className="bg-transparent w-full outline-none text-right font-mono" /></td>
-                            <td><input type="text" value={bid.entity} onChange={e=>updateBid(bid.id, 'entity', e.target.value)} className="bg-transparent w-full outline-none focus:bg-white" /></td>
-                            <td><input type="date" value={bid.submitDate} onChange={e=>updateBid(bid.id, 'submitDate', e.target.value)} className="bg-transparent outline-none text-xs" /></td>
-                            <td><input type="text" value={bid.dept} onChange={e=>updateBid(bid.id, 'dept', e.target.value)} className="bg-transparent w-full outline-none" /></td>
-                            <td><input type="text" value={bid.author} onChange={e=>updateBid(bid.id, 'author', e.target.value)} className="bg-transparent w-full outline-none" /></td>
-                            <td><input type="number" value={bid.bidAmount} onChange={e=>updateBid(bid.id, 'bidAmount', e.target.value)} className="bg-transparent w-full text-right font-mono text-blue-600 font-bold" /></td>
-                            <td><select value={bid.ptStatus} onChange={(e) => updateBid(bid.id, 'ptStatus', e.target.value)} className="text-[11px] font-bold bg-transparent outline-none"><option>확인 필요</option><option>발표없음</option><option>대면 PT</option><option>온라인 PT</option></select></td>
-                            <td><input type="datetime-local" value={bid.ptDate} onChange={e=>updateBid(bid.id, 'ptDate', e.target.value)} className="bg-transparent outline-none text-[10px]" /></td>
-                            <td className="text-right"><button onClick={async () => confirm("삭제?") && db.doc(`artifacts/${appId}/users/${user.uid}/bids/${bid.id}`).delete()} className="text-slate-200 hover:text-red-500 p-2"><Icons.Trash size={16}/></button></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
 
             {activeTab === 'checklist' && (
               <div className="max-w-4xl mx-auto">
-                <div className="flex items-center justify-between gap-6 mb-12">
-                  <div><h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase leading-none">Protocols</h2><p className="text-slate-400 mt-2 font-bold text-sm uppercase tracking-widest leading-none">주차별 업무 로그</p></div>
-                  <button onClick={async () => { const name = prompt("주차 명칭"); if(name) await db.collection(`artifacts/${appId}/users/${user.uid}/checklists`).add({ title: name, items: [{ id: Date.now().toString(36), text: '', completed: false, level: 0, bold: false }], createdAt: Date.now(), order: Date.now() }); }} className="bg-blue-600 hover:bg-blue-700 text-white font-black px-6 py-3.5 rounded-2xl shadow-xl transition-all active:scale-95 leading-none"><Icons.Plus size={18}/></button>
+                <div className="flex items-center justify-between mb-12">
+                  <h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase leading-none">Checklist</h2>
+                  <button onClick={async () => {
+                    const name = prompt("주차 명칭");
+                    if(name) await db.collection(`artifacts/${appId}/users/${user.uid}/checklists`).add({ title: name, items: [{ id: Date.now().toString(36), text: '', completed: false, level: 0 }], createdAt: Date.now(), order: Date.now() });
+                  }} className="bg-blue-600 text-white font-black px-6 py-4 rounded-2xl shadow-xl shadow-blue-500/20 active:scale-95 transition-all"><Icons.Plus/></button>
                 </div>
-                <div className="flex flex-wrap gap-2 mb-10 overflow-x-auto pb-2">
-                  {weeklyChecklists.map(week => (<button key={week.id} onClick={()=>setSelectedWeekId(week.id)} className={`px-6 py-3 rounded-2xl font-black text-[12px] transition-all border-2 whitespace-nowrap ${selectedWeekId === week.id ? 'bg-slate-800 text-white border-slate-800 shadow-lg' : 'bg-white text-slate-400 border-slate-100 hover:border-slate-300'}`}>{week.title}</button>))}
+                <div className="flex gap-2 mb-10 overflow-x-auto pb-2">
+                  {weeklyChecklists.map(week => (
+                    <button key={week.id} onClick={()=>setSelectedWeekId(week.id)} className={`px-6 py-3 rounded-2xl font-black text-xs transition-all border-2 whitespace-nowrap ${selectedWeekId === week.id ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-400 border-slate-100'}`}>{week.title}</button>
+                  ))}
                 </div>
                 {activeWeek && (
-                  <div className="bg-white rounded-[3rem] shadow-2xl border border-slate-50 p-8 md:p-14 relative group min-h-[500px]">
-                    <button onClick={async () => confirm("삭제?") && db.doc(`artifacts/${appId}/users/${user.uid}/checklists/${selectedWeekId}`).delete()} className="absolute top-10 right-10 text-slate-200 hover:text-red-500 opacity-0 group-hover:opacity-100 p-2 transition-all"><Icons.Trash size={22}/></button>
-                    <h3 className="text-3xl font-black text-slate-800 mb-12 border-b-8 border-blue-600 inline-block pb-1 tracking-tighter uppercase leading-none">{activeWeek.title}</h3>
+                  <div className="bg-white rounded-[3rem] shadow-2xl p-10 md:p-16 relative">
+                    <h3 className="text-3xl font-black text-slate-800 mb-12 border-b-8 border-blue-600 inline-block pb-1 uppercase">{activeWeek.title}</h3>
                     <div className="space-y-1">
                       {activeWeek.items.map((item, idx) => (
-                        <div key={item.id} className="flex items-start group/item transition-all notion-item py-1.5" style={{ marginLeft: `${item.level * 32}px` }}>
+                        <div key={item.id} className="flex items-start transition-all notion-row py-1" style={{ marginLeft: `${item.level * 32}px` }}>
                           <input type="checkbox" checked={item.completed} onChange={(e) => handleCheckItemChange(selectedWeekId, idx, 'completed', e.target.checked)} className="mt-2 w-5 h-5 rounded-md border-2 border-slate-200 accent-blue-600 cursor-pointer" />
-                          <input id={`notion-input-${idx}`} type="text" value={item.text} onChange={(e) => handleCheckItemChange(selectedWeekId, idx, 'text', e.target.value)} onKeyDown={(e) => handleCheckKeyDown(e, selectedWeekId, idx)} className={`bg-transparent border-none outline-none px-4 py-1 text-xl transition-all flex-1 ${item.completed ? 'text-slate-300 line-through font-medium' : 'text-slate-700 font-bold'} ${item.bold ? 'font-black underline decoration-blue-500/40' : ''}`} placeholder="..." autoComplete="off" />
+                          <input id={`notion-input-${idx}`} type="text" value={item.text} onChange={(e) => handleCheckItemChange(selectedWeekId, idx, 'text', e.target.value)} onKeyDown={(e) => handleCheckKeyDown(e, selectedWeekId, idx)} className={`notion-input text-xl font-bold ml-4 ${item.completed ? 'text-slate-300 line-through' : 'text-slate-700'}`} placeholder="..." autoComplete="off" />
                         </div>
                       ))}
                     </div>
@@ -391,91 +353,45 @@
               </div>
             )}
 
-            {activeTab === 'doc_gen' && (
-              <div className="max-w-[1400px] mx-auto">
-                <div className="flex items-center justify-between mb-10">
-                  <div><h2 className="text-4xl font-black text-slate-800 tracking-tighter uppercase leading-none">Document Creation</h2><p className="text-slate-400 mt-2 font-bold text-sm uppercase tracking-widest leading-none">재직증명서 발부 시스템</p></div>
-                  <button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-700 text-white font-black px-6 py-4 rounded-2xl shadow-xl flex items-center gap-2 active:scale-95 transition-all"><Icons.Printer size={20}/> 인쇄 / PDF 저장</button>
-                </div>
-                <div className="flex flex-col lg:flex-row gap-10">
-                  <div className="flex-1 bg-white rounded-[2.5rem] shadow-xl p-8 md:p-12 border border-slate-100 self-start">
-                    <h3 className="text-xl font-black text-slate-800 mb-8 border-l-4 border-blue-600 pl-4 uppercase leading-none">정보 입력</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">문서번호</label><input type="text" value={certData.docNo} onChange={e=>setCertData({...certData, docNo: e.target.value})} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 outline-none focus:border-blue-500 font-bold" /></div>
-                      <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">성명</label><input type="text" value={certData.name} onChange={e=>setCertData({...certData, name: e.target.value})} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 outline-none focus:border-blue-500 font-bold" /></div>
-                      <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">주민등록번호</label><input type="text" value={certData.ssn} onChange={e=>setCertData({...certData, ssn: e.target.value})} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 outline-none focus:border-blue-500 font-bold" /></div>
-                      <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">직책</label><input type="text" value={certData.position} onChange={e=>setCertData({...certData, position: e.target.value})} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 outline-none focus:border-blue-500 font-bold" /></div>
-                      <div className="space-y-1 md:col-span-2"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">주소</label><input type="text" value={certData.address} onChange={e=>setCertData({...certData, address: e.target.value})} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 outline-none focus:border-blue-500 font-bold" /></div>
-                      <div className="space-y-1 md:col-span-2"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">근속기간</label><input type="text" value={certData.period} onChange={e=>setCertData({...certData, period: e.target.value})} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 outline-none focus:border-blue-500 font-bold" /></div>
-                    </div>
-                  </div>
-                  <div className="flex-1 overflow-x-auto pb-10">
-                    <div className="cert-container print-area">
-                      <div className="cert-title">재직증명서</div>
-                      <div className="text-right text-lg mb-4 font-bold">{certData.docNo}</div>
-                      <table className="cert-table">
-                        <tbody>
-                          <tr><th>성 명</th><td>{certData.name}</td><th>주민등록번호</th><td>{certData.ssn}</td></tr>
-                          <tr><th>주 소</th><td colSpan="3">{certData.address}</td></tr>
-                          <tr><th>직 책</th><td>{certData.position}</td><th>부 서</th><td>{certData.dept}</td></tr>
-                          <tr><th>근속기간</th><td colSpan="3">{certData.period}</td></tr>
-                          <tr><th>근무형태</th><td>{certData.workType}</td><th>채용형태</th><td>{certData.hireType}</td></tr>
-                        </tbody>
-                      </table>
-                      <div className="text-center text-xl mt-40 mb-40 font-bold">위 사람은 상기와 같이 재직 하고 있음을 증명합니다.</div>
-                      <div className="text-center text-2xl mb-20 font-bold tracking-widest">{certData.issueDate.split('-')[0]}년 {certData.issueDate.split('-')[1]}월 {certData.issueDate.split('-')[2]}일</div>
-                      <div className="mt-auto pt-20 border-t-2 border-black flex flex-col items-end gap-3 text-sm font-bold text-right">
-                        <div>주 소 : {certData.companyAddr}</div>
-                        <div>회 사 명 : {certData.companyName}</div>
-                        <div className="text-2xl font-black mt-4">대 표 : {certData.ceoName} (인)</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {activeTab === 'archives' && (
               <div className="max-w-6xl mx-auto">
                 <div className="flex items-center justify-between mb-14">
-                  <div className="text-center md:text-left"><h2 className="text-5xl font-black text-slate-800 tracking-tighter uppercase leading-none">Archives</h2><p className="text-slate-400 mt-4 font-bold text-xl uppercase tracking-[0.2em] leading-none">데이터 보관소</p></div>
-                  <button onClick={addNASPath} className="bg-[#1e293b] hover:bg-slate-800 text-white font-black px-6 py-4 rounded-2xl shadow-xl flex items-center gap-2 active:scale-95 transition-all text-xs leading-none"><Icons.Link size={16}/> 외부 경로 추가</button>
+                  <h2 className="text-5xl font-black text-slate-800 tracking-tighter uppercase leading-none">Archives</h2>
+                  <button onClick={addPath} className="bg-slate-800 text-white font-black px-6 py-4 rounded-2xl shadow-xl flex items-center gap-2 active:scale-95 transition-all text-xs leading-none"><Icons.Link size={16}/> 외부 경로 추가</button>
                 </div>
                 <div className="bg-white rounded-[3.5rem] shadow-2xl border border-slate-50 overflow-hidden">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead className="bg-slate-50/50 border-b border-slate-100 text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                    <table className="archive-table">
+                      <thead>
                         <tr>
-                          <th className="px-10 py-6">명칭 및 경로</th>
-                          <th className="px-10 py-6 text-center">등록일</th>
-                          <th className="px-10 py-6 text-right">관리</th>
+                          <th style={{ width: '60%' }}>자료 명칭 및 경로</th>
+                          <th className="text-center" style={{ width: '20%' }}>등록일</th>
+                          <th className="text-right" style={{ width: '20%' }}>관리</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50 text-slate-700">
                         {archives.map(item => (
-                          <tr key={item.id} className="hover:bg-blue-50/40 transition-all">
-                            <td className="px-10 py-8">
-                              <div className="flex items-center gap-6 overflow-hidden max-w-[500px]">
-                                <div className={`p-3 rounded-xl flex-shrink-0 ${item.isExternal ? 'bg-orange-50 text-orange-500' : 'bg-blue-50 text-blue-500'}`}>
-                                  {item.isExternal ? <Icons.Link size={24}/> : <Icons.FileText size={24}/>}
-                                </div>
-                                <div className="flex flex-col truncate">
+                          <tr key={item.id} className="hover:bg-blue-50/50 transition-all">
+                            <td>
+                              <div className="flex items-center gap-5 overflow-hidden">
+                                <div className="p-3 bg-blue-50 text-blue-500 rounded-xl shrink-0"><Icons.Link size={24}/></div>
+                                <div className="flex flex-col truncate min-w-0">
                                   <span className="font-black text-xl tracking-tighter truncate">{item.name}</span>
-                                  <span className="text-[11px] text-slate-400 truncate mt-1 font-mono opacity-80">{item.url}</span>
+                                  <span className="text-[11px] text-slate-400 truncate mt-1 opacity-70 font-mono italic">{item.url}</span>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-10 py-8 text-base text-slate-400 font-bold text-center tabular-nums whitespace-nowrap">{new Date(item.createdAt).toLocaleDateString()}</td>
-                            <td className="px-10 py-8">
-                              <div className="flex justify-end items-center gap-4">
-                                <button onClick={()=>{ const t = document.createElement("input"); t.value = item.url; document.body.appendChild(t); t.select(); document.execCommand("copy"); document.body.removeChild(t); alert("복사됨"); }} className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-[10px] px-6 py-3 rounded-xl uppercase transition-colors">COPY</button>
-                                <button onClick={()=>confirm("삭제?") && db.doc(`artifacts/${appId}/users/${user.uid}/archives/${item.id}`).delete()} className="text-slate-300 hover:text-red-500 p-2 transition-colors"><Icons.Trash size={18}/></button>
+                            <td className="text-center text-slate-400 font-bold tabular-nums">{new Date(item.createdAt).toLocaleDateString()}</td>
+                            <td className="text-right">
+                              <div className="flex justify-end gap-3">
+                                <button onClick={()=>{ const t = document.createElement("input"); t.value = item.url; document.body.appendChild(t); t.select(); document.execCommand("copy"); document.body.removeChild(t); alert("경로 복사됨"); }} className="bg-slate-100 hover:bg-blue-600 hover:text-white text-slate-600 font-black text-[10px] px-6 py-3 rounded-xl transition-all">COPY</button>
+                                <button onClick={()=>confirm("삭제?") && db.doc(`artifacts/${appId}/users/${user.uid}/archives/${item.id}`).delete()} className="text-slate-200 hover:text-red-500 p-2"><Icons.Trash/></button>
                               </div>
                             </td>
                           </tr>
                         ))}
                         {archives.length === 0 && (
-                          <tr><td colSpan="3" className="py-24 text-center text-slate-300 font-bold italic">등록된 자료가 없습니다.</td></tr>
+                          <tr><td colSpan="3" className="py-24 text-center text-slate-300 font-bold italic">저장된 아카이브가 없습니다.</td></tr>
                         )}
                       </tbody>
                     </table>
@@ -484,12 +400,48 @@
               </div>
             )}
 
-            {isBulkModalOpen && (
-              <div className="fixed inset-0 z-[100] modal-overlay flex items-center justify-center p-6">
-                <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl p-10 border border-slate-50 overflow-hidden">
-                  <h3 className="text-3xl font-black text-slate-800 mb-2 tracking-tighter uppercase leading-none">Excel Bulk Import</h3>
-                  <textarea className="w-full h-64 bg-slate-50 border border-slate-200 rounded-[2rem] p-6 text-xs font-mono outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all mt-6" placeholder="데이터 복사-붙여넣기..." value={bulkPasteText} onChange={e=>setBulkPasteText(e.target.value)} />
-                  <div className="flex gap-4 mt-8"><button onClick={()=>setIsBulkModalOpen(false)} className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-black py-4 rounded-2xl active:scale-95 transition-all">취소</button><button onClick={handleBulkImport} className="flex-[2] bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-xl active:scale-95 transition-all">일괄 추가하기</button></div>
+            {activeTab === 'cert_emp' && (
+              <div className="max-w-[1400px] mx-auto h-full flex flex-col lg:flex-row gap-10">
+                {/* 폼 영역 */}
+                <div className="w-full lg:w-[400px] bg-white rounded-[3rem] shadow-xl p-10 border border-slate-100 self-start">
+                  <h3 className="text-2xl font-black text-slate-800 mb-8 border-l-8 border-blue-600 pl-4 uppercase leading-none">Certificate Form</h3>
+                  <div className="space-y-4">
+                    <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">문서번호</label><input type="text" value={certData.docNo} onChange={e=>setCertData({...certData, docNo: e.target.value})} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 outline-none font-bold" /></div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">성명</label><input type="text" value={certData.name} onChange={e=>setCertData({...certData, name: e.target.value})} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 outline-none font-bold" /></div>
+                      <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">직책</label><input type="text" value={certData.position} onChange={e=>setCertData({...certData, position: e.target.value})} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 outline-none font-bold" /></div>
+                    </div>
+                    <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">주민번호</label><input type="text" value={certData.ssn} onChange={e=>setCertData({...certData, ssn: e.target.value})} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 outline-none font-bold" /></div>
+                    <div className="space-y-1"><label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">발급일자</label><input type="date" value={certData.issueDate} onChange={e=>setCertData({...certData, issueDate: e.target.value})} className="w-full bg-blue-50 border border-blue-100 rounded-xl p-3 outline-none font-bold text-blue-700" /></div>
+                    <button onClick={() => window.print()} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-2xl shadow-xl flex items-center justify-center gap-3 mt-6 transition-all active:scale-95"><Icons.Printer size={20}/> 인쇄 / PDF 저장</button>
+                  </div>
+                </div>
+
+                {/* 미리보기 영역 */}
+                <div className="flex-1 cert-preview-area overflow-x-auto">
+                  <div className="cert-container print-area">
+                    <div className="cert-header">재직증명서</div>
+                    <div className="cert-doc-no">{certData.docNo}</div>
+                    <table className="cert-table">
+                      <tbody>
+                        <tr><th>성 명</th><td className="font-bold">{certData.name}</td><th>주민등록번호</th><td>{certData.ssn}</td></tr>
+                        <tr><th>주 소</th><td colSpan="3">{certData.address}</td></tr>
+                        <tr><th>직 책</th><td>{certData.position}</td><th>부 서</th><td>{certData.dept}</td></tr>
+                        <tr><th>근속기간</th><td colSpan="3">{certData.period}</td></tr>
+                        <tr><th>근무형태</th><td>{certData.workType}</td><th>채용형태</th><td>{certData.hireType}</td></tr>
+                      </tbody>
+                    </table>
+                    <div className="cert-main-text">위 사람은 상기와 같이 재직 하고 있음을 증명합니다.</div>
+                    <div className="cert-date">{certData.issueDate.split('-')[0]}년 {certData.issueDate.split('-')[1]}월 {certData.issueDate.split('-')[2]}일</div>
+                    <div className="mt-auto pt-20 border-t-2 border-black flex flex-col items-end gap-2 text-right">
+                      <div className="text-lg font-bold">주 소 : {certData.companyAddr}</div>
+                      <div className="text-lg font-bold">회 사 명 : {certData.companyName}</div>
+                      <div className="text-3xl font-black mt-4 flex items-center seal-wrap">
+                        대 표 : {certData.ceoName}
+                        <img src="워드캣_법인인감.png" className="seal-img" alt="Seal" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
